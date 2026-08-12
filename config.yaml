@@ -1,0 +1,68 @@
+# AI Presentation Generator Configuration
+
+# Ollama Configuration
+ollama:
+  base_url: "http://localhost:11434"
+  
+# Available Models
+models:
+  dolphin_8b:
+    name: "Dolphin 8B"
+    model_id: "dolphin-llama3:8b"
+    description: "Fast generation - Great for quick drafts"
+    speed: "Fast (5-10x faster)"
+    quality: "Good"
+    best_for: "Quick iterations, simple content"
+    
+  dolphin_70b:
+    name: "Dolphin 70B"
+    model_id: "dolphin-llama3:70b"
+    description: "Premium quality - Best for professional presentations"
+    speed: "Standard"
+    quality: "Premium"
+    best_for: "Professional business presentations"
+    
+  hermes:
+    name: "Hermes"
+    model_id: "hermes3"
+    description: "Advanced reasoning - Best for technical/educational content"
+    speed: "Standard"
+    quality: "Premium+"
+    best_for: "Technical, educational, complex topics"
+
+# Presentation Settings
+presentation:
+  default_slides: 10
+  min_slides: 5
+  max_slides: 30
+  default_theme: "modern"
+  
+# Themes
+themes:
+  modern:
+    name: "Modern Professional"
+    primary_color: [68, 114, 196]    # RGB
+    accent_color: [237, 125, 49]
+    background: [255, 255, 255]
+    text_color: [0, 0, 0]
+    
+  dark:
+    name: "Dark Tech"
+    primary_color: [41, 128, 185]
+    accent_color: [231, 76, 60]
+    background: [44, 62, 80]
+    text_color: [236, 240, 241]
+    
+  education:
+    name: "Education Blue"
+    primary_color: [52, 152, 219]
+    accent_color: [46, 204, 113]
+    background: [255, 255, 255]
+    text_color: [44, 62, 80]
+    
+  warm:
+    name: "Warm Earth"
+    primary_color: [211, 84, 0]
+    accent_color: [243, 156, 18]
+    background: [255, 255, 255]
+    text_color: [51, 51, 51]
