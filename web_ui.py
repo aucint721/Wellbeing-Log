@@ -148,7 +148,7 @@ def get_presentation(presentation_id):
 
 @app.route("/api/presentations/<presentation_id>/retheme", methods=["POST"])
 def retheme_presentation(presentation_id):
-    """Rebuild PPTX from saved outline with a new theme (no AI call)."""
+    """Rebuild PPTX from saved outline with a new theme / per-slide animations (no AI call)."""
     try:
         safe_id = os.path.basename(presentation_id)
         meta = _load_meta(safe_id)
@@ -160,7 +160,7 @@ def retheme_presentation(presentation_id):
         if theme not in generator.themes:
             return jsonify({"error": f"Unknown theme: {theme}"}), 400
 
-        outline = meta.get("outline")
+        outline = data.get("outline") or meta.get("outline")
         if not outline or not outline.get("slides"):
             return jsonify({"error": "Saved outline missing; regenerate from content"}), 400
 
@@ -171,6 +171,23 @@ def retheme_presentation(presentation_id):
 
         slide_transition = data.get("slide_transition", meta.get("slide_transition", "fade"))
         bullet_animation = data.get("bullet_animation", meta.get("bullet_animation", "fade_in"))
+
+        # If client sent per-slide edits, keep them; optionally stamp defaults onto all slides
+        if data.get("apply_defaults_to_all"):
+            outline = generator.apply_default_slide_animations(
+                outline,
+                slide_transition=slide_transition,
+                bullet_animation=bullet_animation,
+                overwrite=True,
+            )
+        else:
+            outline = generator.apply_default_slide_animations(
+                outline,
+                slide_transition=slide_transition,
+                bullet_animation=bullet_animation,
+                overwrite=False,
+            )
+
         generator.create_presentation(
             outline,
             theme,
@@ -236,6 +253,12 @@ def generate():
 
         # Keep outline so we can preview and re-theme without another AI call
         outline = generator.generate_outline(content, model_key, num_slides)
+        outline = generator.apply_default_slide_animations(
+            outline,
+            slide_transition=slide_transition,
+            bullet_animation=bullet_animation,
+            overwrite=True,
+        )
         generator.create_presentation(
             outline,
             theme,
