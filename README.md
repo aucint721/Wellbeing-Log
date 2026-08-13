@@ -124,18 +124,31 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ## 🔧 Troubleshooting
 
+### Ollama: connection refused / Hermes or Dolphin errors
+
+Hermes, Dolphin 8B, and Dolphin 70B run through **local Ollama**, not Claude. Claude does not need Ollama.
+
+```bash
+# 1. Install Ollama from https://ollama.com and open the app (Mac)
+# 2. Confirm it is reachable
+curl http://localhost:11434/api/tags
+
+# 3. Pull the model you want
+ollama pull hermes3
+# or
+ollama pull dolphin-llama3:8b
+```
+
+The Web UI marks each local model as **Ready** or **Needs setup** after checking Ollama. If you see a connection error, use **Claude** instead, or finish the Ollama setup above.
+
 ### Claude: missing API key
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Ollama: connection refused
-```bash
-ollama serve
-```
-
 ### Model not found (Ollama)
 ```bash
+ollama pull hermes3
 ollama pull dolphin-llama3:8b
 ```
 
