@@ -1,21 +1,20 @@
-# 🎨 AI Presentation Generator
+# ✨ AI Presentation Generator — Enhanced Designer
 
-Create beautiful, professional presentations from text using **your local AI models** (Dolphin 8B, Dolphin 70B, and Hermes). No subscriptions, no cloud uploads, completely private and free forever.
+Create beautiful, designer-quality PowerPoint presentations from text using **Claude** (best quality) or your local Ollama models (Dolphin 8B, Dolphin 70B, Hermes).
 
 ## ✨ Features
 
-- **🤖 Multiple AI Models**: Choose between Dolphin 8B (fast), Dolphin 70B (premium), or Hermes (technical)
-- **🎨 Beautiful Themes**: Modern Professional, Dark Tech, Education Blue, Warm Earth
+- **🤖 Claude + Local Models**: Claude Sonnet for punchy, memorable content; Ollama models for fully local/private runs
+- **🎨 13 Designer Themes**: Classic + Neon Cyber, Sunset Gradient, Ocean Deep, Lavender Dream, and more
+- **✨ Designer Layouts**: Geometric accents, gradient simulation, modern visual hierarchy
 - **💻 Two Interfaces**: Web UI (easy) or CLI (powerful)
-- **📊 PowerPoint Export**: Native PPTX files, fully editable
-- **🔒 100% Private**: Everything runs locally on your machine
-- **💰 Zero Cost**: No API fees, no subscriptions, completely free
+- **📊 Native PowerPoint**: Fully editable `.pptx` export
 
 ## 📋 Requirements
 
 - Python 3.8+
-- Ollama installed and running
-- Your local models: `dolphin-llama3:8b`, `dolphin-llama3:70b`, `hermes3`
+- For Claude: `ANTHROPIC_API_KEY` environment variable
+- For local models: Ollama running with `dolphin-llama3:8b`, `dolphin-llama3:70b`, and/or `hermes3`
 
 ## 🚀 Quick Start
 
@@ -25,231 +24,113 @@ Create beautiful, professional presentations from text using **your local AI mod
 pip install -r requirements.txt
 ```
 
-### 2. Make Sure Ollama is Running
+### 2. Choose Your Interface
+
+#### Option A: Web UI
 
 ```bash
-# Start Ollama (if not already running)
-ollama serve
-```
-
-### 3. Choose Your Interface
-
-#### Option A: Web UI (Recommended for Beginners)
-
-```bash
+export ANTHROPIC_API_KEY=your_key_here   # for Claude
 python web_ui.py
 ```
 
-Then open http://localhost:5000 in your browser.
+Open http://localhost:5000
 
 #### Option B: Command Line
 
 ```bash
-# Basic usage
-python cli.py example_lesson_plan.txt
+# Best quality with Claude + designer theme
+export ANTHROPIC_API_KEY=your_key_here
+python cli.py example_lesson_plan.txt -m claude -n 12 -t sunset_gradient
 
-# With options
-python cli.py my_content.txt -m dolphin_70b -n 15 -t modern -o my_presentation.pptx
+# Local Ollama
+python cli.py my_content.txt -m dolphin_8b -n 10 -t neon_cyber -o my_presentation.pptx
 ```
 
 ## 🎯 Usage Examples
 
-### Web UI
-
-1. Start the web server: `python web_ui.py`
-2. Open http://localhost:5000
-3. Paste your lesson plan or content
-4. Select your preferred AI model
-5. Choose a theme
-6. Click "Generate Presentation"
-7. Download your PPTX file
-
-### Command Line Interface
-
 ```bash
-# Quick draft with fast model
-python cli.py lesson_plan.txt -m dolphin_8b -n 10
-
-# Professional presentation with premium model
-python cli.py business_plan.txt -m dolphin_70b -n 15 -t modern
-
-# Technical presentation with Hermes
-python cli.py lecture_notes.txt -m hermes -n 20 -t education
-
-# Custom output filename
-python cli.py content.txt -m dolphin_70b -o quarterly_review.pptx
-```
-
-### List Available Models
-
-```bash
+# List models / themes
 python cli.py --list-models
+python cli.py --list-themes
+
+# Claude + Sunset Gradient (recommended)
+python cli.py lesson_plan.txt -m claude -t sunset_gradient -n 12
+
+# Quick local draft
+python cli.py notes.txt -m dolphin_8b -t mint_fresh
+
+# Technical content with Hermes
+python cli.py lecture_notes.txt -m hermes -t education -n 20
 ```
 
 ## 🤖 Model Selection Guide
 
-| Model | When to Use | Speed | Quality |
-|-------|-------------|-------|---------|
-| **Dolphin 8B** | Quick drafts, simple content, fast iterations | 5-10x faster | Good |
-| **Dolphin 70B** | Professional presentations, business use | Standard | Premium |
-| **Hermes** | Technical content, education, complex topics | Standard | Premium+ |
+| Model | Provider | When to Use | Quality |
+|-------|----------|-------------|---------|
+| **Claude** | Anthropic API | Best writing & structure (default) | Premium++ |
+| **Dolphin 8B** | Ollama (local) | Quick drafts, offline | Good |
+| **Dolphin 70B** | Ollama (local) | Strong local quality | Premium |
+| **Hermes** | Ollama (local) | Technical / educational | Premium+ |
 
 ## 🎨 Available Themes
 
-- **Modern Professional**: Clean, corporate look (default)
-- **Dark Tech**: Dark background, tech-focused
-- **Education Blue**: Friendly, educational style
-- **Warm Earth**: Warm tones, creative presentations
+**Classic:** Modern Professional, Dark Tech, Education Blue, Warm Earth
 
-## 📝 Input Format
+**Designer:** Neon Cyberpunk, Sunset Gradient (default), Ocean Deep, Lavender Dream, Forest Minimal, Royal Purple, Coral Pink, Midnight Blue, Mint Fresh
 
-Your input can be any text format:
-
-- Lesson plans
-- Lecture notes
-- Meeting notes
-- Project proposals
-- Training materials
-- Business plans
-- Research summaries
-
-**Example:**
-
-```text
-Introduction to Machine Learning
-
-Topics:
-- What is ML?
-- Supervised vs Unsupervised Learning
-- Neural Networks
-- Applications
-- Getting Started with ML
-
-Key Points:
-Machine learning is transforming industries...
-```
+Add your own in `config.yaml` with `primary_color`, `accent_color`, `background`, `text_color`, and optional `gradient_colors`.
 
 ## 🛠️ Configuration
 
-Edit `config.yaml` to customize:
+Edit `config.yaml` for models, themes, and defaults. Claude settings:
 
-- Model names and descriptions
-- Themes and colors
-- Default settings
-- Ollama connection
-
-## 💡 Tips for Best Results
-
-1. **Structure your content**: Use clear sections and bullet points
-2. **Be specific**: Include key points you want covered
-3. **Choose the right model**:
-   - Dolphin 70B: General business/professional
-   - Hermes: Technical/educational content
-   - Dolphin 8B: Quick drafts
-4. **Iterate**: Start with Dolphin 8B for speed, refine with Dolphin 70B
-
-## 📊 Cost Comparison
-
-| Solution | Cost | Your Setup |
-|----------|------|------------|
-| Gamma | $8-20/month | ✅ FREE |
-| Presentations.AI | $20/month | ✅ FREE |
-| Perceptis AI | $29/month | ✅ FREE |
-| **Your Local Setup** | **$0/month** | 🎉 |
-
-## 🔧 Troubleshooting
-
-### "ollama: command not found"
-
-Install Ollama from https://ollama.com
-
-### "Connection refused to localhost:11434"
-
-Make sure Ollama is running:
-```bash
-ollama serve
+```yaml
+claude:
+  model_id: "claude-sonnet-5"
 ```
 
-### Model not found
+Set the API key via environment (preferred):
 
-Pull your models:
 ```bash
-ollama pull dolphin-llama3:8b
-ollama pull dolphin-llama3:70b
-ollama pull hermes3
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
-
-### Generation is slow
-
-- Use Dolphin 8B for faster results
-- Close other applications using GPU/CPU
-- Reduce number of slides
-
-### Poor quality output
-
-- Try Dolphin 70B or Hermes for better quality
-- Provide more structured input
-- Be more specific about what you want
 
 ## 📚 Project Structure
 
 ```
 .
-├── config.yaml                  # Configuration
-├── presentation_generator.py    # Core generation engine
+├── config.yaml                  # Models + 13 themes
+├── presentation_generator.py    # Core designer engine
 ├── cli.py                       # Command-line interface
-├── web_ui.py                    # Web interface
-├── templates/
-│   └── index.html              # Web UI template
-├── requirements.txt             # Python dependencies
-├── example_lesson_plan.txt     # Example input
-└── README.md                    # This file
+├── web_ui.py                    # Flask web interface
+├── templates/index.html         # Web UI
+├── demo_designer_claude.py      # Standalone designer demo
+├── demo_enhanced_claude.py      # Standalone enhanced demo
+├── requirements.txt
+└── README.md
 ```
 
-## 🚀 Advanced Usage
+## 🔧 Troubleshooting
 
-### Python API
-
-```python
-from presentation_generator import PresentationGenerator
-
-generator = PresentationGenerator()
-
-# Generate from text
-result = generator.generate_from_text(
-    content="Your content here...",
-    model_key="dolphin_70b",
-    num_slides=15,
-    theme="modern",
-    output_path="output.pptx"
-)
+### Claude: missing API key
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Custom Themes
+### Ollama: connection refused
+```bash
+ollama serve
+```
 
-Edit `config.yaml` to add your own themes with custom colors.
+### Model not found (Ollama)
+```bash
+ollama pull dolphin-llama3:8b
+```
 
-## 🤝 Contributing
-
-This is your personal presentation tool! Feel free to modify and customize it to your needs.
-
-## 📄 License
-
-Free to use, modify, and distribute.
-
-## 🎉 Get Started Now!
+## 🎉 Get Started
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Start web UI
+export ANTHROPIC_API_KEY=your_key_here
 python web_ui.py
-
-# Or use CLI
-python cli.py example_lesson_plan.txt
 ```
-
----
-
-**Made with ❤️ for creating beautiful presentations without subscriptions or fees!**
