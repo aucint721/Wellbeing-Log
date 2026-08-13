@@ -74,7 +74,7 @@ Create an engaging, professional presentation now:"""
     print("⏳ This may take 10-20 seconds...\n")
     
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
         max_tokens=4000,
         temperature=0.7,
         messages=[
