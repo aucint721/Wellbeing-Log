@@ -21,4 +21,5 @@ Standard install/run details: see `README.md`, `QUICKSTART.md`, and `package` sc
 - **No automated test/lint suite** is configured in-repo. Sanity-check with `python cli.py --list-models`, `python cli.py --list-themes`, Flask homepage/`/api/models`, and a short `cli.py` generation that writes a `.pptx`.
 - **Generated `.pptx` files and `outputs/` are gitignored.** Copy demos to `/opt/cursor/artifacts/` when you need reviewable evidence.
 - Web UI keeps generated decks under `outputs/` with sidecar `.json` outlines: preview + **re-theme without another AI call** via `/api/presentations` and `/api/presentations/<id>/retheme`.
+- **Text-line animations** in `presentation_generator.py` must use PowerPoint `nodeType="clickEffect"` + `presetClass="entr"` and `fill="hold"` on effects. Do not insert a mainSeq “hide all at delay=0” boot step — it blanks bullets right after wipe/fade transitions and clicks then advance the slide. Animations are only visible in PowerPoint **Slide Show**.
 - Standalone demos (`demo_*.py`) still exist; production path is `presentation_generator.py` via `cli.py` / `web_ui.py`.
