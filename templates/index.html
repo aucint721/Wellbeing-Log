@@ -48,12 +48,15 @@
             font-size: 0.85em;
         }
 
-        .main-card {
+        .main-card, .side-card {
             background: white;
             border-radius: 20px;
             padding: 36px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            margin-bottom: 24px;
         }
+
+        .side-card { padding: 28px; }
 
         .form-group { margin-bottom: 28px; }
 
@@ -146,16 +149,17 @@
             border: 1px solid rgba(0,0,0,0.06);
         }
 
-        input[type="number"] {
+        input[type="number"], select {
             width: 100%;
-            max-width: 220px;
+            max-width: 280px;
             padding: 12px;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
             font-size: 16px;
+            background: white;
         }
 
-        .generate-btn {
+        .generate-btn, .secondary-btn {
             width: 100%;
             padding: 18px;
             background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
@@ -168,12 +172,19 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .generate-btn:hover {
+        .secondary-btn {
+            width: auto;
+            padding: 12px 20px;
+            font-size: 1em;
+            background: #0f172a;
+        }
+
+        .generate-btn:hover, .secondary-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 28px rgba(249, 115, 22, 0.35);
         }
 
-        .generate-btn:disabled {
+        .generate-btn:disabled, .secondary-btn:disabled {
             opacity: 0.55;
             cursor: not-allowed;
             transform: none;
@@ -195,6 +206,7 @@
         .download-btn {
             display: inline-block;
             margin-top: 12px;
+            margin-right: 8px;
             padding: 12px 28px;
             background: #16a34a;
             color: white;
@@ -224,6 +236,95 @@
             font-size: 0.9em;
             margin-top: 8px;
         }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .preview-header h2 {
+            font-size: 1.4em;
+            color: #0f172a;
+        }
+
+        .meta-line {
+            color: #64748b;
+            font-size: 0.95em;
+            margin-top: 6px;
+        }
+
+        .retheme-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 16px 0 8px;
+        }
+
+        .slide-preview {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background: #f8fafc;
+        }
+
+        .slide-preview .slide-type {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #ea580c;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .slide-preview h3 {
+            font-size: 1.05em;
+            margin-bottom: 8px;
+        }
+
+        .slide-preview ul {
+            margin-left: 18px;
+            color: #334155;
+        }
+
+        .slide-preview li { margin-bottom: 4px; }
+
+        .history-list { display: grid; gap: 10px; }
+
+        .history-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: #fb923c;
+            background: #fff7ed;
+        }
+
+        .history-item.active {
+            border-color: #f97316;
+            background: #fff7ed;
+        }
+
+        .history-item h3 { font-size: 1em; margin-bottom: 4px; }
+        .history-item p { color: #64748b; font-size: 0.85em; }
+
+        .empty-history {
+            color: #64748b;
+            font-size: 0.95em;
+        }
     </style>
 </head>
 <body>
@@ -234,7 +335,7 @@
             <div class="badge-row">
                 <span class="pill">Claude or local Ollama</span>
                 <span class="pill">Native PPTX export</span>
-                <span class="pill">Geometric designer slides</span>
+                <span class="pill">Preview &amp; re-theme saved decks</span>
             </div>
         </div>
 
@@ -296,11 +397,46 @@ Topics:
                 <div id="status" class="status hidden"></div>
             </form>
         </div>
+
+        <div id="previewCard" class="side-card hidden">
+            <div class="preview-header">
+                <div>
+                    <h2 id="previewTitle">Presentation preview</h2>
+                    <p class="meta-line" id="previewMeta"></p>
+                </div>
+                <div>
+                    <a id="previewDownload" class="download-btn" href="#">Download PPTX</a>
+                </div>
+            </div>
+
+            <label>🎨 Apply another theme (no AI call — instant rebuild)</label>
+            <div class="retheme-row">
+                <select id="rethemeSelect">
+                    {% for key, theme in themes.items() %}
+                    <option value="{{ key }}">{{ theme.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="secondary-btn" id="rethemeBtn" onclick="rethemeCurrent()">
+                    Rebuild with this theme
+                </button>
+            </div>
+            <p class="hint">Browsers can’t fully embed PowerPoint. This shows your slide outline; download the PPTX for the designed slides + animations.</p>
+
+            <div id="outlinePreview" style="margin-top: 18px;"></div>
+        </div>
+
+        <div class="side-card">
+            <h2 style="margin-bottom: 14px;">📚 Recent presentations</h2>
+            <div id="historyList" class="history-list">
+                <p class="empty-history">No saved presentations yet. Generate one above.</p>
+            </div>
+        </div>
     </div>
 
     <script>
         let selectedModel = {{ default_model|tojson }};
         let selectedTheme = {{ default_theme|tojson }};
+        let currentPresentation = null;
 
         function selectModel(model) {
             selectedModel = model;
@@ -316,8 +452,119 @@ Topics:
             if (card) card.classList.add('selected');
         }
 
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderOutline(outline) {
+            const slides = (outline && outline.slides) || [];
+            if (!slides.length) {
+                return '<p class="empty-history">No outline available.</p>';
+            }
+            return slides.map((slide, idx) => {
+                const type = slide.type || 'content';
+                const title = escapeHtml(slide.title || 'Untitled');
+                const subtitle = slide.subtitle ? `<p>${escapeHtml(slide.subtitle)}</p>` : '';
+                const bullets = (slide.bullets || [])
+                    .map(b => `<li>${escapeHtml(b)}</li>`)
+                    .join('');
+                const bulletsHtml = bullets ? `<ul>${bullets}</ul>` : '';
+                return `
+                    <div class="slide-preview">
+                        <div class="slide-type">Slide ${idx + 1} · ${escapeHtml(type)}</div>
+                        <h3>${title}</h3>
+                        ${subtitle}
+                        ${bulletsHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showPresentation(detail) {
+            currentPresentation = detail;
+            const card = document.getElementById('previewCard');
+            card.classList.remove('hidden');
+            document.getElementById('previewTitle').textContent = detail.title || 'Untitled';
+            document.getElementById('previewMeta').textContent =
+                `${detail.num_slides || 0} slides · ${detail.theme_name || detail.theme} · ${detail.model || ''} · ${detail.created_at || ''}`;
+            const dl = document.getElementById('previewDownload');
+            dl.href = detail.download_url;
+            dl.download = detail.filename || 'presentation.pptx';
+            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
+            document.getElementById('outlinePreview').innerHTML = renderOutline(detail.outline);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            loadHistory(detail.id);
+        }
+
+        async function loadHistory(activeId) {
+            const list = document.getElementById('historyList');
+            try {
+                const res = await fetch('/api/presentations');
+                const data = await res.json();
+                const items = data.presentations || [];
+                if (!items.length) {
+                    list.innerHTML = '<p class="empty-history">No saved presentations yet. Generate one above.</p>';
+                    return;
+                }
+                list.innerHTML = items.map(item => `
+                    <div class="history-item ${item.id === activeId ? 'active' : ''}" onclick="openPresentation('${item.id}')">
+                        <div>
+                            <h3>${escapeHtml(item.title)}</h3>
+                            <p>${escapeHtml(item.theme_name || item.theme)} · ${item.num_slides || '?'} slides · ${escapeHtml(item.created_at || '')}</p>
+                        </div>
+                        <a class="download-btn" style="margin:0;padding:8px 14px;font-size:0.9em;" href="${item.download_url}" onclick="event.stopPropagation()">Download</a>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = `<p class="empty-history">Could not load history: ${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        async function openPresentation(id) {
+            const res = await fetch(`/api/presentations/${id}`);
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Could not open presentation');
+                return;
+            }
+            showPresentation(data);
+        }
+
+        async function rethemeCurrent() {
+            if (!currentPresentation) return;
+            const theme = document.getElementById('rethemeSelect').value;
+            const btn = document.getElementById('rethemeBtn');
+            const statusDiv = document.getElementById('status');
+            btn.disabled = true;
+            statusDiv.className = 'status loading';
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = '<span class="spinner"></span>Rebuilding with new theme (no AI call)…';
+            try {
+                const res = await fetch(`/api/presentations/${currentPresentation.id}/retheme`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ theme })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Retheme failed');
+                showPresentation(data);
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `✓ Rebuilt with ${escapeHtml(data.theme_name || data.theme)}. <a class="download-btn" href="${data.download_url}">Download</a>`;
+            } catch (err) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `✗ Error: ${escapeHtml(err.message)}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         selectModel(selectedModel);
         selectTheme(selectedTheme);
+        loadHistory();
 
         document.getElementById('presentationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -349,15 +596,16 @@ Topics:
                 if (response.ok) {
                     statusDiv.className = 'status success';
                     statusDiv.innerHTML = `
-                        ✓ Success! Your presentation is ready.<br>
+                        ✓ Success! Preview below — download or re-theme anytime.<br>
                         <a href="${result.download_url}" class="download-btn">Download Presentation</a>
                     `;
+                    showPresentation(result);
                 } else {
                     throw new Error(result.error || 'Unknown error');
                 }
             } catch (error) {
                 statusDiv.className = 'status error';
-                statusDiv.innerHTML = `✗ Error: ${error.message}`;
+                statusDiv.innerHTML = `✗ Error: ${escapeHtml(error.message)}`;
             } finally {
                 generateBtn.disabled = false;
             }
