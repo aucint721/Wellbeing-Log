@@ -54,7 +54,7 @@ presentation:
   default_theme: "sunset_gradient"
   default_model: "claude"
   default_slide_transition: "fade"
-  default_bullet_animation: "appear"
+  default_bullet_animation: "fade_in"
 
 # Animation option catalogs (used by Web UI / CLI)
 animations:
@@ -65,9 +65,10 @@ animations:
     wipe: "Wipe"
   bullet_animations:
     none: "None"
-    appear: "Appear (click)"
-    fade: "Fade in (click)"
-    fly_left: "Fly from left (click)"
+    fade_in: "Fade in (click each line)"
+    fade_in_out: "Fade in & out (click each line)"
+    appear: "Appear (click each line)"
+    fly_left: "Fly from left (click each line)"
   
 # Themes
 themes:

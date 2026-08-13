@@ -87,7 +87,7 @@ def _public_detail(meta: dict) -> dict:
         "download_url": f"/download/{meta.get('filename')}",
         "outline": meta.get("outline", {}),
         "slide_transition": meta.get("slide_transition", "fade"),
-        "bullet_animation": meta.get("bullet_animation", "appear"),
+        "bullet_animation": meta.get("bullet_animation", "fade_in"),
     }
 
 
@@ -106,7 +106,7 @@ def index():
         default_theme=defaults.get("default_theme", "sunset_gradient"),
         default_slides=defaults.get("default_slides", 10),
         default_slide_transition=defaults.get("default_slide_transition", "fade"),
-        default_bullet_animation=defaults.get("default_bullet_animation", "appear"),
+        default_bullet_animation=defaults.get("default_bullet_animation", "fade_in"),
         slide_transitions=anim.get("slide_transitions", {}),
         bullet_animations=anim.get("bullet_animations", {}),
     )
@@ -170,7 +170,7 @@ def retheme_presentation(presentation_id):
         output_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
         slide_transition = data.get("slide_transition", meta.get("slide_transition", "fade"))
-        bullet_animation = data.get("bullet_animation", meta.get("bullet_animation", "appear"))
+        bullet_animation = data.get("bullet_animation", meta.get("bullet_animation", "fade_in"))
         generator.create_presentation(
             outline,
             theme,
@@ -215,7 +215,7 @@ def generate():
         num_slides = int(data.get("num_slides", 10))
         theme = data.get("theme", "sunset_gradient")
         slide_transition = data.get("slide_transition", "fade")
-        bullet_animation = data.get("bullet_animation", "appear")
+        bullet_animation = data.get("bullet_animation", "fade_in")
 
         if not content:
             return jsonify({"error": "No content provided"}), 400

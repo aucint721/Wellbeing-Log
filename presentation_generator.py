@@ -236,7 +236,7 @@ Generate the presentation outline now:"""
         theme_key: str = "modern",
         output_path: str = "presentation.pptx",
         slide_transition: str = "fade",
-        bullet_animation: str = "appear",
+        bullet_animation: str = "fade_in",
     ) -> str:
         """Create a polished PowerPoint presentation from an outline."""
         if theme_key not in self.themes:
@@ -248,7 +248,7 @@ Generate the presentation outline now:"""
         if slide_transition not in transitions:
             slide_transition = "fade"
         if bullet_animation not in bullet_anims:
-            bullet_animation = "appear"
+            bullet_animation = "fade_in"
 
         theme = self.themes[theme_key]
         self._active_theme = theme
@@ -333,8 +333,8 @@ Generate the presentation outline now:"""
             for existing in sld.findall(f"{_P}transition"):
                 sld.remove(existing)
 
-            # Insert transition before timing if present
-            trans = etree.Element(f"{_P}transition", spd="med")
+            # Slow fade reads better; advance on click
+            trans = etree.Element(f"{_P}transition", spd="slow", advClick="1")
             child_tag = {
                 "fade": "fade",
                 "push": "push",
@@ -359,17 +359,78 @@ Generate the presentation outline now:"""
         except Exception:
             pass
 
+    def _shape_spid(self, shape) -> str:
+        """Return the DrawingML shape id used by animation targets."""
+        try:
+            cNvPr = shape._element.nvSpPr.cNvPr
+            return str(cNvPr.get("id"))
+        except Exception:
+            return str(shape.shape_id)
+
+    def _anim_set_visibility(self, parent, shape_id: str, visible: bool, next_id_fn, delay: str = "0"):
+        """OOXML <p:set> for style.visibility."""
+        set_el = etree.SubElement(parent, f"{_P}set")
+        c_bhvr = etree.SubElement(set_el, f"{_P}cBhvr")
+        c_tn = etree.SubElement(
+            c_bhvr,
+            f"{_P}cTn",
+            id=next_id_fn(),
+            dur="1",
+            fill="hold",
+        )
+        st = etree.SubElement(c_tn, f"{_P}stCondLst")
+        etree.SubElement(st, f"{_P}cond", delay=delay)
+        tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
+        etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
+        attr = etree.SubElement(c_bhvr, f"{_P}attrNameLst")
+        etree.SubElement(attr, f"{_P}attrName").text = "style.visibility"
+        to = etree.SubElement(set_el, f"{_P}to")
+        etree.SubElement(to, f"{_P}strVal", val="visible" if visible else "hidden")
+
+    def _anim_effect(
+        self,
+        parent,
+        shape_id: str,
+        next_id_fn,
+        *,
+        transition: str = "in",
+        effect_filter: str = "fade",
+        dur_ms: str = "750",
+    ):
+        """OOXML entrance/exit effect."""
+        anim = etree.SubElement(
+            parent,
+            f"{_P}animEffect",
+            transition=transition,
+            filter=effect_filter,
+        )
+        c_bhvr = etree.SubElement(anim, f"{_P}cBhvr")
+        etree.SubElement(c_bhvr, f"{_P}cTn", id=next_id_fn(), dur=dur_ms)
+        tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
+        etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
+
     def _add_appear_animations(self, slide, shapes: List):
-        """Add sequential on-click animations for the given shapes."""
-        style = getattr(self, "_bullet_animation", "appear")
+        """
+        Sequential on-click text-line animations.
+
+        Lines are hidden until animated (prevents flicker where text shows,
+        then briefly disappears as the entrance effect runs).
+        """
+        style = getattr(self, "_bullet_animation", "fade_in")
+        # Back-compat with older saved UI values
+        if style == "fade":
+            style = "fade_in"
         if not shapes or style == "none":
             return
 
         effect_filter = {
+            "fade_in": "fade",
+            "fade_in_out": "fade",
             "appear": "fade",
-            "fade": "fade",
             "fly_left": "fly(fromLeft)",
         }.get(style, "fade")
+        enter_dur = "400" if style == "appear" else "750"
+        do_fade_out = style == "fade_in_out"
 
         try:
             sld = slide._element
@@ -378,58 +439,81 @@ Generate the presentation outline now:"""
 
             timing = etree.SubElement(sld, f"{_P}timing")
             tn_lst = etree.SubElement(timing, f"{_P}tnLst")
-            par = etree.SubElement(tn_lst, f"{_P}par")
-            c_tn = etree.SubElement(
-                par,
+            root_par = etree.SubElement(tn_lst, f"{_P}par")
+            root_tn = etree.SubElement(
+                root_par,
                 f"{_P}cTn",
                 id="1",
                 dur="indefinite",
                 restart="never",
                 nodeType="tmRoot",
             )
-            child_tn_lst = etree.SubElement(c_tn, f"{_P}childTnLst")
-            seq = etree.SubElement(child_tn_lst, f"{_P}seq", concurrent="1", nextAc="seek")
-            seq_c_tn = etree.SubElement(
+            root_children = etree.SubElement(root_tn, f"{_P}childTnLst")
+
+            seq = etree.SubElement(root_children, f"{_P}seq", concurrent="1", nextAc="seek")
+            seq_tn = etree.SubElement(
                 seq,
                 f"{_P}cTn",
                 id="2",
                 dur="indefinite",
                 nodeType="mainSeq",
             )
-            seq_children = etree.SubElement(seq_c_tn, f"{_P}childTnLst")
+            seq_children = etree.SubElement(seq_tn, f"{_P}childTnLst")
 
             next_id = 3
-            for index, shape in enumerate(shapes):
-                shape_id = str(shape._element.get("id") or shape.shape_id)
 
-                par2 = etree.SubElement(seq_children, f"{_P}par")
-                c_tn2 = etree.SubElement(par2, f"{_P}cTn", id=str(next_id), fill="hold")
+            def alloc_id() -> str:
+                nonlocal next_id
+                cur = str(next_id)
                 next_id += 1
-                st_cond = etree.SubElement(c_tn2, f"{_P}stCondLst")
-                if index == 0:
-                    etree.SubElement(st_cond, f"{_P}cond", delay="0")
-                else:
-                    etree.SubElement(st_cond, f"{_P}cond", delay="0", evt="onClick")
+                return cur
 
-                child2 = etree.SubElement(c_tn2, f"{_P}childTnLst")
-                par3 = etree.SubElement(child2, f"{_P}par")
-                c_tn3 = etree.SubElement(par3, f"{_P}cTn", id=str(next_id), fill="hold")
-                next_id += 1
-                st_cond3 = etree.SubElement(c_tn3, f"{_P}stCondLst")
-                etree.SubElement(st_cond3, f"{_P}cond", delay="0")
-                child3 = etree.SubElement(c_tn3, f"{_P}childTnLst")
+            shape_ids = [self._shape_spid(shape) for shape in shapes]
 
-                anim_effect = etree.SubElement(
-                    child3,
-                    f"{_P}animEffect",
+            # On slide start: hide every animated line
+            boot = etree.SubElement(seq_children, f"{_P}par")
+            boot_tn = etree.SubElement(boot, f"{_P}cTn", id=alloc_id(), fill="hold")
+            boot_st = etree.SubElement(boot_tn, f"{_P}stCondLst")
+            etree.SubElement(boot_st, f"{_P}cond", delay="0")
+            boot_kids = etree.SubElement(boot_tn, f"{_P}childTnLst")
+            for spid in shape_ids:
+                self._anim_set_visibility(boot_kids, spid, False, alloc_id, delay="0")
+
+            # Each click: optional fade-out of previous, then entrance of next
+            for index, spid in enumerate(shape_ids):
+                step = etree.SubElement(seq_children, f"{_P}par")
+                step_tn = etree.SubElement(step, f"{_P}cTn", id=alloc_id(), fill="hold")
+                step_st = etree.SubElement(step_tn, f"{_P}stCondLst")
+                # Wait for click (including first line) for predictable control
+                etree.SubElement(step_st, f"{_P}cond", delay="indefinite")
+                step_kids = etree.SubElement(step_tn, f"{_P}childTnLst")
+
+                inner = etree.SubElement(step_kids, f"{_P}par")
+                inner_tn = etree.SubElement(inner, f"{_P}cTn", id=alloc_id(), fill="hold")
+                inner_st = etree.SubElement(inner_tn, f"{_P}stCondLst")
+                etree.SubElement(inner_st, f"{_P}cond", delay="0")
+                inner_kids = etree.SubElement(inner_tn, f"{_P}childTnLst")
+
+                if do_fade_out and index > 0:
+                    prev_id = shape_ids[index - 1]
+                    self._anim_effect(
+                        inner_kids,
+                        prev_id,
+                        alloc_id,
+                        transition="out",
+                        effect_filter="fade",
+                        dur_ms="500",
+                    )
+
+                self._anim_set_visibility(inner_kids, spid, True, alloc_id, delay="0")
+                self._anim_effect(
+                    inner_kids,
+                    spid,
+                    alloc_id,
                     transition="in",
-                    filter=effect_filter,
+                    effect_filter=effect_filter,
+                    dur_ms=enter_dur,
                 )
-                c_bhvr = etree.SubElement(anim_effect, f"{_P}cBhvr")
-                etree.SubElement(c_bhvr, f"{_P}cTn", id=str(next_id), dur="500")
-                next_id += 1
-                tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
-                etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
 
             prev = etree.SubElement(seq, f"{_P}prevCondLst")
             etree.SubElement(prev, f"{_P}cond", evt="onPrev", delay="0")
@@ -683,7 +767,7 @@ Generate the presentation outline now:"""
         theme: str = "modern",
         output_path: str = "presentation.pptx",
         slide_transition: str = "fade",
-        bullet_animation: str = "appear",
+        bullet_animation: str = "fade_in",
     ) -> str:
         """Complete pipeline: text -> outline -> polished designer presentation."""
         print(f"\n{'=' * 60}")
