@@ -4,12 +4,17 @@ Desktop launcher for AI Presentation Generator.
 
 Starts the Flask Web UI in the background and opens it in a native window
 (pywebview). Falls back to your default browser if a native window isn't available.
+
+Native windows don't handle browser-style file downloads well, so this app
+exposes a small JS API that saves PPTX files into your Downloads folder.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -59,6 +64,36 @@ def _wait_for_server(host: str, port: int, timeout: float = 15.0) -> bool:
     return False
 
 
+class DesktopApi:
+    """Called from the Web UI JavaScript inside the desktop window."""
+
+    def save_to_downloads(self, filename: str):
+        """Copy a generated PPTX from outputs/ into ~/Downloads."""
+        safe = Path(filename).name
+        if not safe.endswith(".pptx"):
+            return {"ok": False, "error": "Only .pptx files can be saved"}
+
+        src = ROOT / "outputs" / safe
+        if not src.exists():
+            return {"ok": False, "error": f"File not found: {safe}"}
+
+        downloads = Path.home() / "Downloads"
+        downloads.mkdir(parents=True, exist_ok=True)
+        dest = downloads / safe
+        shutil.copy2(src, dest)
+
+        # Show in Finder on macOS when possible
+        revealed = False
+        if sys.platform == "darwin":
+            try:
+                subprocess.run(["open", "-R", str(dest)], check=False)
+                revealed = True
+            except Exception:
+                pass
+
+        return {"ok": True, "path": str(dest), "revealed": revealed}
+
+
 def main() -> int:
     port = _pick_port()
     host = "127.0.0.1"
@@ -82,6 +117,7 @@ def main() -> int:
     print("AI Presentation Generator — Desktop")
     print("=" * 60)
     print(f"Running at: {url}")
+    print("Downloads save to your Downloads folder.")
     print("Close the window (or press Ctrl+C) to quit.")
     print("=" * 60)
 
@@ -89,9 +125,11 @@ def main() -> int:
     try:
         import webview
 
-        window = webview.create_window(
+        api = DesktopApi()
+        webview.create_window(
             "AI Presentation Generator",
             url,
+            js_api=api,
             width=1280,
             height=900,
             min_size=(900, 700),

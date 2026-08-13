@@ -442,7 +442,7 @@ Topics:
                     <p class="meta-line" id="previewMeta"></p>
                 </div>
                 <div>
-                    <a id="previewDownload" class="download-btn" href="#">Download PPTX</a>
+                    <a id="previewDownload" class="download-btn" href="#" onclick="event.preventDefault(); downloadPresentation(currentPresentation && currentPresentation.filename, currentPresentation && currentPresentation.download_url);">Download PPTX</a>
                 </div>
             </div>
 
@@ -507,6 +507,50 @@ Topics:
                 .replace(/"/g, '&quot;');
         }
 
+        async function downloadPresentation(filename, url) {
+            const name = (filename || '').split('/').pop();
+            if (!name) {
+                alert('Nothing to download yet.');
+                return;
+            }
+
+            // Desktop app (pywebview): native windows often can't download attachments
+            try {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.save_to_downloads) {
+                    const result = await window.pywebview.api.save_to_downloads(name);
+                    if (result && result.ok) {
+                        alert('Saved to Downloads:\n' + result.path);
+                        return;
+                    }
+                    if (result && result.error) {
+                        throw new Error(result.error);
+                    }
+                }
+            } catch (err) {
+                console.warn('Desktop save failed, trying server copy…', err);
+            }
+
+            // Fallback: server copies into ~/Downloads
+            try {
+                const res = await fetch('/api/save-to-downloads/' + encodeURIComponent(name), { method: 'POST' });
+                const data = await res.json();
+                if (res.ok && data.ok) {
+                    alert('Saved to Downloads:\n' + data.path);
+                    return;
+                }
+            } catch (err) {
+                console.warn('Server save failed, trying browser download…', err);
+            }
+
+            // Last resort: normal browser download navigation
+            const link = document.createElement('a');
+            link.href = url || ('/download/' + encodeURIComponent(name));
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
         function renderOutline(outline) {
             const slides = (outline && outline.slides) || [];
             if (!slides.length) {
@@ -540,8 +584,10 @@ Topics:
                 `${detail.num_slides || 0} slides · ${detail.theme_name || detail.theme} · ${detail.model || ''} · ${detail.created_at || ''}`;
             const dl = document.getElementById('previewDownload');
             dl.href = detail.download_url;
-            dl.download = detail.filename || 'presentation.pptx';
-            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
+            dl.onclick = (e) => {
+                e.preventDefault();
+                downloadPresentation(detail.filename, detail.download_url);
+            };            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
             if (detail.slide_transition) document.getElementById('rethemeTransition').value = detail.slide_transition;
             if (detail.bullet_animation) document.getElementById('rethemeBulletAnim').value = detail.bullet_animation;
             document.getElementById('outlinePreview').innerHTML = renderOutline(detail.outline);
@@ -565,7 +611,7 @@ Topics:
                             <h3>${escapeHtml(item.title)}</h3>
                             <p>${escapeHtml(item.theme_name || item.theme)} · ${item.num_slides || '?'} slides · ${escapeHtml(item.created_at || '')}</p>
                         </div>
-                        <a class="download-btn" style="margin:0;padding:8px 14px;font-size:0.9em;" href="${item.download_url}" onclick="event.stopPropagation()">Download</a>
+                        <a class="download-btn" style="margin:0;padding:8px 14px;font-size:0.9em;" href="${item.download_url}" onclick="event.preventDefault(); event.stopPropagation(); downloadPresentation('${item.filename}', '${item.download_url}');">Download</a>
                     </div>
                 `).join('');
             } catch (err) {
@@ -603,7 +649,7 @@ Topics:
                 if (!res.ok) throw new Error(data.error || 'Retheme failed');
                 showPresentation(data);
                 statusDiv.className = 'status success';
-                statusDiv.innerHTML = `✓ Rebuilt with ${escapeHtml(data.theme_name || data.theme)}. <a class="download-btn" href="${data.download_url}">Download</a>`;
+                statusDiv.innerHTML = `✓ Rebuilt with ${escapeHtml(data.theme_name || data.theme)}. <a class="download-btn" href="${data.download_url}" onclick="event.preventDefault(); downloadPresentation('${data.filename}', '${data.download_url}');">Download</a>`;
             } catch (err) {
                 statusDiv.className = 'status error';
                 statusDiv.innerHTML = `✗ Error: ${escapeHtml(err.message)}`;
@@ -649,7 +695,7 @@ Topics:
                     statusDiv.className = 'status success';
                     statusDiv.innerHTML = `
                         ✓ Success! Preview below — download or re-theme anytime.<br>
-                        <a href="${result.download_url}" class="download-btn">Download Presentation</a>
+                        <a href="${result.download_url}" class="download-btn" onclick="event.preventDefault(); downloadPresentation('${result.filename}', '${result.download_url}');">Download Presentation</a>
                     `;
                     showPresentation(result);
                 } else {

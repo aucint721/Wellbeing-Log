@@ -271,14 +271,40 @@ def generate():
 
 @app.route("/download/<filename>")
 def download(filename):
-    """Download generated presentation"""
+    """Download generated presentation (browser-friendly attachment)."""
     safe_name = os.path.basename(filename)
     if not safe_name.endswith(".pptx"):
         return "File not found", 404
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
     if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=safe_name,
+            mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        )
     return "File not found", 404
+
+
+@app.route("/api/save-to-downloads/<filename>", methods=["POST"])
+def save_to_downloads(filename):
+    """Copy a generated PPTX into the user's Downloads folder (desktop/browser fallback)."""
+    import shutil
+    from pathlib import Path
+
+    safe_name = os.path.basename(filename)
+    if not safe_name.endswith(".pptx"):
+        return jsonify({"ok": False, "error": "Only .pptx files can be saved"}), 400
+
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
+    if not os.path.exists(file_path):
+        return jsonify({"ok": False, "error": "File not found"}), 404
+
+    downloads = Path.home() / "Downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    dest = downloads / safe_name
+    shutil.copy2(file_path, dest)
+    return jsonify({"ok": True, "path": str(dest)})
 
 
 if __name__ == "__main__":
