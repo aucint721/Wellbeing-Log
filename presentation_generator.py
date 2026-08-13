@@ -497,7 +497,7 @@ Generate the presentation outline now:"""
         effect_filter: str = "fade",
         dur_ms: str = "750",
     ):
-        """OOXML entrance/exit effect."""
+        """OOXML entrance/exit effect. fill=hold keeps the end state (visible/hidden)."""
         anim = etree.SubElement(
             parent,
             f"{_P}animEffect",
@@ -505,7 +505,8 @@ Generate the presentation outline now:"""
             filter=effect_filter,
         )
         c_bhvr = etree.SubElement(anim, f"{_P}cBhvr")
-        etree.SubElement(c_bhvr, f"{_P}cTn", id=next_id_fn(), dur=dur_ms)
+        # Without fill="hold", PowerPoint removes the effect after dur and text vanishes.
+        etree.SubElement(c_bhvr, f"{_P}cTn", id=next_id_fn(), dur=dur_ms, fill="hold")
         tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
         etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
 
@@ -513,8 +514,10 @@ Generate the presentation outline now:"""
         """
         Sequential on-click text-line animations.
 
-        Lines are hidden until animated (prevents flicker where text shows,
-        then briefly disappears as the entrance effect runs).
+        Uses real PowerPoint clickEffect entrance presets so:
+        - lines stay hidden until clicked (including during wipe/fade transitions)
+        - each click reveals the next line instead of advancing the slide
+        - fill=hold keeps each line visible after it animates in
         """
         style = getattr(self, "_bullet_animation", "fade_in")
         # Back-compat with older saved UI values
@@ -529,6 +532,14 @@ Generate the presentation outline now:"""
             "appear": "fade",
             "fly_left": "fly(fromLeft)",
         }.get(style, "fade")
+        # PowerPoint preset IDs: 1=Appear, 10=Fade, 2=Fly
+        preset_id = {
+            "appear": "1",
+            "fade_in": "10",
+            "fade_in_out": "10",
+            "fly_left": "2",
+        }.get(style, "10")
+        preset_subtype = "8" if style == "fly_left" else "0"  # 8 = from left
         enter_dur = "400" if style == "appear" else "750"
         do_fade_out = style == "fade_in_out"
 
@@ -570,19 +581,20 @@ Generate the presentation outline now:"""
 
             shape_ids = [self._shape_spid(shape) for shape in shapes]
 
-            # On slide start: hide every animated line
-            boot = etree.SubElement(seq_children, f"{_P}par")
-            boot_tn = etree.SubElement(boot, f"{_P}cTn", id=alloc_id(), fill="hold")
-            boot_st = etree.SubElement(boot_tn, f"{_P}stCondLst")
-            etree.SubElement(boot_st, f"{_P}cond", delay="0")
-            boot_kids = etree.SubElement(boot_tn, f"{_P}childTnLst")
-            for spid in shape_ids:
-                self._anim_set_visibility(boot_kids, spid, False, alloc_id, delay="0")
-
-            # Each click: optional fade-out of previous, then entrance of next
+            # Each click: optional fade-out of previous, then entrance of next.
+            # presetClass="entr" + clickEffect => hide until animated (no post-wipe blanking).
             for index, spid in enumerate(shape_ids):
                 step = etree.SubElement(seq_children, f"{_P}par")
-                step_tn = etree.SubElement(step, f"{_P}cTn", id=alloc_id(), fill="hold")
+                step_tn = etree.SubElement(
+                    step,
+                    f"{_P}cTn",
+                    id=alloc_id(),
+                    fill="hold",
+                    nodeType="clickEffect",
+                    presetID=preset_id,
+                    presetClass="entr",
+                    presetSubtype=preset_subtype,
+                )
                 step_st = etree.SubElement(step_tn, f"{_P}stCondLst")
                 # Wait for click (including first line) for predictable control
                 etree.SubElement(step_st, f"{_P}cond", delay="indefinite")
@@ -604,6 +616,7 @@ Generate the presentation outline now:"""
                         effect_filter="fade",
                         dur_ms="500",
                     )
+                    self._anim_set_visibility(inner_kids, prev_id, False, alloc_id, delay="500")
 
                 self._anim_set_visibility(inner_kids, spid, True, alloc_id, delay="0")
                 self._anim_effect(
