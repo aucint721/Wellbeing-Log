@@ -16,7 +16,7 @@ Standard install/run details: see `README.md`, `QUICKSTART.md`, and `package` sc
 
 ### Non-obvious gotchas
 
-- **Claude requires `ANTHROPIC_API_KEY`** in the environment. Without it, `-m claude` / Web UI Claude selection fails. Local Ollama models (`dolphin_8b`, `dolphin_70b`, `hermes`) need `ollama serve` on `localhost:11434` and pulled models — optional if using Claude only.
+- **Claude requires `ANTHROPIC_API_KEY`** in the environment. Without it, `-m claude` / Web UI Claude selection fails. Local Ollama models (`dolphin_8b`, `dolphin_70b`, `hermes`) need the Ollama app/`ollama serve` on `localhost:11434` and a pulled image (`ollama pull hermes3`, etc.) — optional if using Claude only. `/api/models` reports live Ready/Needs setup status for the UI.
 - **Default model/theme** in `config.yaml` are `claude` and `sunset_gradient`. Prefer those for demos unless testing Ollama.
 - **No automated test/lint suite** is configured in-repo. Sanity-check with `python cli.py --list-models`, `python cli.py --list-themes`, Flask homepage/`/api/models`, and a short `cli.py` generation that writes a `.pptx`.
 - **Generated `.pptx` files and `outputs/` are gitignored.** Copy demos to `/opt/cursor/artifacts/` when you need reviewable evidence.

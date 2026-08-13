@@ -51,6 +51,80 @@ class PresentationGenerator:
         """List available themes."""
         return self.themes
 
+    def _ollama_installed_names(self) -> Optional[List[str]]:
+        """Return installed Ollama model names, or None if Ollama is unreachable."""
+        try:
+            response = requests.get(f"{self.ollama_url}/api/tags", timeout=3)
+            response.raise_for_status()
+            models = response.json().get("models") or []
+            names: List[str] = []
+            for entry in models:
+                name = (entry.get("name") or entry.get("model") or "").strip()
+                if name:
+                    names.append(name)
+            return names
+        except (requests.RequestException, ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _ollama_model_pulled(model_id: str, installed: List[str]) -> bool:
+        """True if model_id matches an installed Ollama tag (with/without :tag)."""
+        wanted = model_id.strip().lower()
+        wanted_base = wanted.split(":", 1)[0]
+        for name in installed:
+            n = name.strip().lower()
+            if n == wanted or n.split(":", 1)[0] == wanted_base:
+                return True
+        return False
+
+    def list_models_with_status(self) -> Dict:
+        """
+        Return models plus live availability for the Web UI.
+
+        Claude is available when ANTHROPIC_API_KEY (or config api_key) is set.
+        Ollama models need a reachable Ollama server and a pulled model image.
+        """
+        installed = self._ollama_installed_names()
+        ollama_up = installed is not None
+        claude_key = bool(os.getenv("ANTHROPIC_API_KEY") or self.claude_config.get("api_key"))
+
+        enriched: Dict = {}
+        for key, model in self.models.items():
+            info = dict(model)
+            provider = model.get("provider", "ollama")
+            if provider == "claude":
+                info["available"] = claude_key
+                info["status"] = (
+                    "Ready"
+                    if claude_key
+                    else "Set ANTHROPIC_API_KEY to use Claude"
+                )
+            else:
+                model_id = model.get("model_id", key)
+                if not ollama_up:
+                    info["available"] = False
+                    info["status"] = (
+                        f"Ollama is not running at {self.ollama_url}. "
+                        "Start it (open the Ollama app, or run: ollama serve)"
+                    )
+                elif self._ollama_model_pulled(model_id, installed or []):
+                    info["available"] = True
+                    info["status"] = "Ready (local Ollama)"
+                else:
+                    info["available"] = False
+                    info["status"] = f"Not installed. Run: ollama pull {model_id}"
+            enriched[key] = info
+
+        return {
+            "models": enriched,
+            "ollama": {
+                "up": ollama_up,
+                "base_url": self.ollama_url,
+                "installed": installed or [],
+            },
+            "claude": {"api_key_set": claude_key},
+        }
+
     def _build_prompt(self, content: str, num_slides: int) -> str:
         """Build the polished concise content-generation prompt."""
         return f"""You are an expert presentation designer creating a captivating presentation from the following content.
@@ -157,26 +231,52 @@ Generate the presentation outline now:"""
     def _generate_outline_ollama(self, content: str, model_key: str, num_slides: int) -> Dict:
         """Generate outline via local Ollama."""
         model_id = self.models[model_key]["model_id"]
+        model_name = self.models[model_key]["name"]
         prompt = self._build_prompt(content, num_slides)
 
-        print(f"Generating outline with {self.models[model_key]['name']} (Ollama)...")
+        print(f"Generating outline with {model_name} (Ollama)...")
 
-        response = requests.post(
-            f"{self.ollama_url}/api/generate",
-            json={
-                "model": model_id,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
+        try:
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": model_id,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                    },
                 },
-            },
-            timeout=300,
-        )
+                timeout=300,
+            )
+        except requests.exceptions.ConnectionError as e:
+            raise ConnectionError(
+                f"{model_name} needs Ollama running locally. "
+                f"Could not connect to {self.ollama_url}. "
+                "On Mac: open the Ollama app (or run `ollama serve`), then "
+                f"`ollama pull {model_id}`, and try again. "
+                "Or switch the model to Claude (uses ANTHROPIC_API_KEY)."
+            ) from e
+        except requests.exceptions.Timeout as e:
+            raise TimeoutError(
+                f"Ollama timed out while generating with {model_name} ({model_id}). "
+                "Large models can be slow on first load — wait for the model to finish "
+                "loading in Ollama, or try Dolphin 8B / Claude."
+            ) from e
 
         if response.status_code != 200:
-            raise Exception(f"Ollama API error: {response.status_code} - {response.text[:200]}")
+            body = (response.text or "")[:300]
+            lower = body.lower()
+            if response.status_code == 404 or "not found" in lower:
+                raise RuntimeError(
+                    f"Ollama does not have model '{model_id}' installed. "
+                    f"Run: ollama pull {model_id}"
+                )
+            raise RuntimeError(
+                f"Ollama error for {model_name} ({model_id}): "
+                f"HTTP {response.status_code} — {body}"
+            )
 
         result = response.json()
         outline = self._extract_json_outline(result["response"])

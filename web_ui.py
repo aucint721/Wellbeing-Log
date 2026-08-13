@@ -114,8 +114,8 @@ def index():
 
 @app.route("/api/models")
 def get_models():
-    """Get available models"""
-    return jsonify(generator.list_models())
+    """Get models with live Claude/Ollama availability status."""
+    return jsonify(generator.list_models_with_status())
 
 
 @app.route("/api/themes")
