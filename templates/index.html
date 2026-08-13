@@ -344,30 +344,98 @@
 
         .history-list { display: grid; gap: 10px; }
 
+        .history-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .history-toolbar h2 { margin: 0; }
+
         .history-item {
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 14px 16px;
+            background: #fff;
+            overflow: hidden;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .history-item:hover { border-color: #fb923c; }
+
+        .history-item.expanded {
+            border-color: #f97316;
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.12);
+        }
+
+        .history-item-header {
             display: flex;
             justify-content: space-between;
             gap: 12px;
             align-items: center;
+            padding: 14px 16px;
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            background: #fff;
         }
 
-        .history-item:hover {
-            border-color: #fb923c;
-            background: #fff7ed;
-        }
-
-        .history-item.active {
-            border-color: #f97316;
-            background: #fff7ed;
-        }
+        .history-item.expanded .history-item-header { background: #fff7ed; }
 
         .history-item h3 { font-size: 1em; margin-bottom: 4px; }
         .history-item p { color: #64748b; font-size: 0.85em; }
+
+        .history-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chevron-btn, .ghost-btn {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #0f172a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.88em;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .chevron-btn { min-width: 40px; }
+
+        .history-item.expanded .chevron-btn { background: #fff7ed; border-color: #fdba74; }
+
+        .history-item-body {
+            display: none;
+            padding: 0 16px 16px;
+            border-top: 1px solid #fed7aa;
+            background: #fffaf5;
+        }
+
+        .history-item.expanded .history-item-body { display: block; }
+
+        .outline-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin: 14px 0 10px;
+            flex-wrap: wrap;
+        }
+
+        .outline-toolbar strong { color: #0f172a; }
+
+        .slide-preview.collapsed-slide .slide-body { display: none; }
+
+        .slide-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
 
         .empty-history {
             color: #64748b;
@@ -472,49 +540,33 @@ Topics:
             </form>
         </div>
 
-        <div id="previewCard" class="side-card hidden">
-            <div class="preview-header">
-                <div>
-                    <h2 id="previewTitle">Presentation preview</h2>
-                    <p class="meta-line" id="previewMeta"></p>
-                </div>
-                <div>
-                    <a id="previewDownload" class="download-btn" href="#" onclick="event.preventDefault(); downloadPresentation(currentPresentation && currentPresentation.filename, currentPresentation && currentPresentation.download_url);">Download PPTX</a>
-                </div>
-            </div>
-
-            <label>🎨 Apply another theme / animation (no AI call)</label>
-            <div class="retheme-row">
-                <select id="rethemeSelect">
-                    {% for key, theme in themes.items() %}
-                    <option value="{{ key }}">{{ theme.name }}</option>
-                    {% endfor %}
-                </select>
-                <select id="rethemeTransition">
-                    {% for key, label in slide_transitions.items() %}
-                    <option value="{{ key }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <select id="rethemeBulletAnim">
-                    {% for key, label in bullet_animations.items() %}
-                    <option value="{{ key }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <button type="button" class="secondary-btn" id="rethemeBtn" onclick="rethemeCurrent()">
-                    Rebuild
-                </button>
-            </div>
-            <p class="hint">Browsers can’t fully embed PowerPoint. This shows your slide outline; download the PPTX for the designed slides + animations.</p>
-
-            <div id="outlinePreview" style="margin-top: 18px;"></div>
-        </div>
-
         <div class="side-card">
-            <h2 style="margin-bottom: 14px;">📚 Recent presentations</h2>
+            <div class="history-toolbar">
+                <h2>📚 Recent presentations</h2>
+                <button type="button" class="ghost-btn" id="collapseHistoryBtn" onclick="collapseAllHistory()">Minimize all</button>
+            </div>
+            <p class="hint" style="margin-top:0;margin-bottom:14px;">Click a presentation to expand its slides. Only one stays open so the list stays easy to scan.</p>
             <div id="historyList" class="history-list">
                 <p class="empty-history">No saved presentations yet. Generate one above.</p>
             </div>
         </div>
+
+        <!-- Hidden retheme controls template values used when rendering expanded history -->
+        <template id="themeOptionsTemplate">
+            {% for key, theme in themes.items() %}
+            <option value="{{ key }}">{{ theme.name }}</option>
+            {% endfor %}
+        </template>
+        <template id="transitionOptionsTemplate">
+            {% for key, label in slide_transitions.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+        </template>
+        <template id="bulletAnimOptionsTemplate">
+            {% for key, label in bullet_animations.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+        </template>
     </div>
 
     <script>
@@ -522,6 +574,9 @@ Topics:
         let selectedTheme = {{ default_theme|tojson }};
         let currentPresentation = null;
         let modelAvailability = {};
+        let expandedHistoryId = null;
+        let historyCache = {};
+        let slidesExpanded = true;
 
         function selectModel(model) {
             selectedModel = model;
@@ -643,12 +698,27 @@ Topics:
             link.remove();
         }
 
+        function optionsFromTemplate(templateId) {
+            const tpl = document.getElementById(templateId);
+            return tpl ? tpl.innerHTML : '';
+        }
+
         function renderOutline(outline) {
             const slides = (outline && outline.slides) || [];
             if (!slides.length) {
                 return '<p class="empty-history">No outline available.</p>';
             }
-            return slides.map((slide, idx) => {
+            const toggleLabel = slidesExpanded ? 'Hide slides' : 'Show slides';
+            const toolbar = `
+                <div class="outline-toolbar">
+                    <strong>Slide outline (${slides.length})</strong>
+                    <button type="button" class="ghost-btn" onclick="event.stopPropagation(); toggleSlidesExpanded()">${toggleLabel}</button>
+                </div>
+            `;
+            if (!slidesExpanded) {
+                return `${toolbar}<p class="empty-history">${slides.length} slides minimized — click “Show slides” to browse.</p>`;
+            }
+            const slidesHtml = slides.map((slide, idx) => {
                 const type = slide.type || 'content';
                 const title = escapeHtml(slide.title || 'Untitled');
                 const subtitle = slide.subtitle ? `<p>${escapeHtml(slide.subtitle)}</p>` : '';
@@ -665,30 +735,61 @@ Topics:
                     </div>
                 `;
             }).join('');
+            return `${toolbar}<div id="outlineSlides">${slidesHtml}</div>`;
         }
 
-        function showPresentation(detail) {
+        function renderExpandedBody(detail) {
+            const themeOpts = optionsFromTemplate('themeOptionsTemplate');
+            const transitionOpts = optionsFromTemplate('transitionOptionsTemplate');
+            const bulletOpts = optionsFromTemplate('bulletAnimOptionsTemplate');
+            return `
+                <p class="meta-line" style="margin-top:12px;">
+                    ${escapeHtml(detail.theme_name || detail.theme || '')}
+                    · ${detail.num_slides || 0} slides
+                    · ${escapeHtml(detail.model || '')}
+                    · ${escapeHtml(detail.created_at || '')}
+                </p>
+                <label style="margin-top:12px;">🎨 Apply another theme / animation (no AI call)</label>
+                <div class="retheme-row">
+                    <select id="rethemeSelect">${themeOpts}</select>
+                    <select id="rethemeTransition">${transitionOpts}</select>
+                    <select id="rethemeBulletAnim">${bulletOpts}</select>
+                    <button type="button" class="secondary-btn" id="rethemeBtn" onclick="rethemeCurrent()">Rebuild</button>
+                </div>
+                <p class="hint">Browsers can’t fully embed PowerPoint. This shows your slide outline; download the PPTX for the designed slides + animations.</p>
+                <div id="outlinePreview">${renderOutline(detail.outline)}</div>
+            `;
+        }
+
+        function collapseAllHistory() {
+            expandedHistoryId = null;
+            currentPresentation = null;
+            document.querySelectorAll('.history-item.expanded').forEach(el => el.classList.remove('expanded'));
+            document.querySelectorAll('.history-item-body').forEach(el => { el.innerHTML = ''; });
+            document.querySelectorAll('.chevron-btn').forEach(el => { el.textContent = '▸'; });
+        }
+
+        function toggleSlidesExpanded() {
+            slidesExpanded = !slidesExpanded;
+            if (currentPresentation) {
+                const preview = document.getElementById('outlinePreview');
+                if (preview) preview.innerHTML = renderOutline(currentPresentation.outline);
+            }
+        }
+
+        async function showPresentation(detail) {
             currentPresentation = detail;
-            const card = document.getElementById('previewCard');
-            card.classList.remove('hidden');
-            document.getElementById('previewTitle').textContent = detail.title || 'Untitled';
-            document.getElementById('previewMeta').textContent =
-                `${detail.num_slides || 0} slides · ${detail.theme_name || detail.theme} · ${detail.model || ''} · ${detail.created_at || ''}`;
-            const dl = document.getElementById('previewDownload');
-            dl.href = detail.download_url;
-            dl.onclick = (e) => {
-                e.preventDefault();
-                downloadPresentation(detail.filename, detail.download_url);
-            };            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
-            if (detail.slide_transition) document.getElementById('rethemeTransition').value = detail.slide_transition;
-            if (detail.bullet_animation) document.getElementById('rethemeBulletAnim').value = detail.bullet_animation;
-            document.getElementById('outlinePreview').innerHTML = renderOutline(detail.outline);
-            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            loadHistory(detail.id);
+            historyCache[detail.id] = detail;
+            expandedHistoryId = detail.id;
+            slidesExpanded = true;
+            await loadHistory(detail.id);
+            const item = document.querySelector(`.history-item[data-id="${detail.id}"]`);
+            if (item) item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         async function loadHistory(activeId) {
             const list = document.getElementById('historyList');
+            if (activeId) expandedHistoryId = activeId;
             try {
                 const res = await fetch('/api/presentations');
                 const data = await res.json();
@@ -697,28 +798,62 @@ Topics:
                     list.innerHTML = '<p class="empty-history">No saved presentations yet. Generate one above.</p>';
                     return;
                 }
-                list.innerHTML = items.map(item => `
-                    <div class="history-item ${item.id === activeId ? 'active' : ''}" onclick="openPresentation('${item.id}')">
-                        <div>
-                            <h3>${escapeHtml(item.title)}</h3>
-                            <p>${escapeHtml(item.theme_name || item.theme)} · ${item.num_slides || '?'} slides · ${escapeHtml(item.created_at || '')}</p>
+                list.innerHTML = items.map(item => {
+                    const isOpen = item.id === expandedHistoryId;
+                    const detail = isOpen ? (historyCache[item.id] || item) : null;
+                    const body = (isOpen && detail && detail.outline)
+                        ? renderExpandedBody(detail)
+                        : (isOpen ? '<p class="empty-history">Loading…</p>' : '');
+                    return `
+                        <div class="history-item ${isOpen ? 'expanded' : ''}" data-id="${item.id}">
+                            <div class="history-item-header" onclick="toggleHistoryItem('${item.id}')">
+                                <div>
+                                    <h3>${escapeHtml(item.title)}</h3>
+                                    <p>${escapeHtml(item.theme_name || item.theme)} · ${item.num_slides || '?'} slides · ${escapeHtml(item.created_at || '')}</p>
+                                </div>
+                                <div class="history-item-actions">
+                                    <a class="download-btn" style="margin:0;padding:8px 14px;font-size:0.9em;" href="${item.download_url}" onclick="event.preventDefault(); event.stopPropagation(); downloadPresentation('${item.filename}', '${item.download_url}');">Download</a>
+                                    <button type="button" class="chevron-btn" aria-label="Expand or minimize">${isOpen ? '▾' : '▸'}</button>
+                                </div>
+                            </div>
+                            <div class="history-item-body">${body}</div>
                         </div>
-                        <a class="download-btn" style="margin:0;padding:8px 14px;font-size:0.9em;" href="${item.download_url}" onclick="event.preventDefault(); event.stopPropagation(); downloadPresentation('${item.filename}', '${item.download_url}');">Download</a>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
+
+                if (expandedHistoryId && currentPresentation && currentPresentation.id === expandedHistoryId) {
+                    const themeEl = document.getElementById('rethemeSelect');
+                    const transEl = document.getElementById('rethemeTransition');
+                    const bulletEl = document.getElementById('rethemeBulletAnim');
+                    if (themeEl) themeEl.value = currentPresentation.theme || selectedTheme;
+                    if (transEl && currentPresentation.slide_transition) transEl.value = currentPresentation.slide_transition;
+                    if (bulletEl && currentPresentation.bullet_animation) bulletEl.value = currentPresentation.bullet_animation;
+                }
             } catch (err) {
                 list.innerHTML = `<p class="empty-history">Could not load history: ${escapeHtml(err.message)}</p>`;
             }
         }
 
-        async function openPresentation(id) {
-            const res = await fetch(`/api/presentations/${id}`);
-            const data = await res.json();
-            if (!res.ok) {
-                alert(data.error || 'Could not open presentation');
+        async function toggleHistoryItem(id) {
+            if (expandedHistoryId === id) {
+                collapseAllHistory();
                 return;
             }
-            showPresentation(data);
+            await openPresentation(id);
+        }
+
+        async function openPresentation(id) {
+            try {
+                const res = await fetch(`/api/presentations/${id}`);
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Could not open presentation');
+                    return;
+                }
+                await showPresentation(data);
+            } catch (err) {
+                alert(err.message || 'Could not open presentation');
+            }
         }
 
         async function rethemeCurrent() {
@@ -737,9 +872,10 @@ Topics:
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ theme, slide_transition, bullet_animation })
-                });                const data = await res.json();
+                });
+                const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Retheme failed');
-                showPresentation(data);
+                await showPresentation(data);
                 statusDiv.className = 'status success';
                 statusDiv.innerHTML = `✓ Rebuilt with ${escapeHtml(data.theme_name || data.theme)}. <a class="download-btn" href="${data.download_url}" onclick="event.preventDefault(); downloadPresentation('${data.filename}', '${data.download_url}');">Download</a>`;
             } catch (err) {
