@@ -19,4 +19,5 @@ Standard install/run details: see `README.md`, `QUICKSTART.md`, and `package` sc
 - **Default model/theme** in `config.yaml` are `claude` and `sunset_gradient`. Prefer those for demos unless testing Ollama.
 - **No automated test/lint suite** is configured in-repo. Sanity-check with `python cli.py --list-models`, `python cli.py --list-themes`, Flask homepage/`/api/models`, and a short `cli.py` generation that writes a `.pptx`.
 - **Generated `.pptx` files and `outputs/` are gitignored.** Copy demos to `/opt/cursor/artifacts/` when you need reviewable evidence.
+- Web UI keeps generated decks under `outputs/` with sidecar `.json` outlines: preview + **re-theme without another AI call** via `/api/presentations` and `/api/presentations/<id>/retheme`.
 - Standalone demos (`demo_*.py`) still exist; production path is `presentation_generator.py` via `cli.py` / `web_ui.py`.
