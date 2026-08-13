@@ -33,7 +33,9 @@ export ANTHROPIC_API_KEY=your_key_here   # for Claude
 python web_ui.py
 ```
 
-Open http://localhost:5000
+Open http://localhost:5050
+
+(Port defaults to **5050** so it doesn’t clash with macOS AirPlay on 5000. Override with `PORT=8080 python web_ui.py` if needed.)
 
 #### Option B: Command Line
 

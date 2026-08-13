@@ -8,7 +8,7 @@ This repo is a Python AI Presentation Generator (CLI + Flask Web UI). Designer l
 
 | Service | Command | Notes |
 |---------|---------|-------|
-| Web UI | `python web_ui.py` | http://localhost:5000 — debug Flask on `0.0.0.0:5000` |
+| Web UI | `python web_ui.py` | http://localhost:5050 — Flask on `0.0.0.0` (default port **5050** to avoid macOS AirPlay on 5000; override with `PORT=...`) |
 | CLI | `python cli.py <input.txt> -m claude -t sunset_gradient` | Core generation path |
 
 Standard install/run details: see `README.md`, `QUICKSTART.md`, and `package` scripts in those docs. Dependencies: `pip install -r requirements.txt` (includes `pyyaml` and `anthropic`).

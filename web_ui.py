@@ -109,10 +109,13 @@ def download(filename):
 
 
 if __name__ == "__main__":
+    # Default 5050 — macOS often reserves 5000 for AirPlay Receiver
+    port = int(os.getenv("PORT", "5050"))
+
     print("\n" + "=" * 70)
     print("✨ AI Presentation Generator - Enhanced Designer Web UI")
     print("=" * 70)
-    print("\nStarting server at http://localhost:5000")
+    print(f"\nStarting server at http://localhost:{port}")
     print("Press Ctrl+C to stop\n")
 
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=port)
