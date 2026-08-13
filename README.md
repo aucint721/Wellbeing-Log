@@ -29,11 +29,20 @@ pip install -r requirements.txt
 #### Option A: Desktop App (easiest on Mac)
 
 ```bash
-pip install -r requirements.txt
-./install_desktop_shortcut.sh
+cd ~/Wellbeing-Log
+chmod +x install_desktop_shortcuts.sh
+./install_desktop_shortcuts.sh
 ```
 
-Then double-click **Presentation Generator** on your Desktop.
+Then on the Desktop, double-click in order:
+
+1. **1. Setup Presentation Generator** — creates `venv` and installs packages  
+2. **2. Set Claude API Key** — pastes your Anthropic key into `.env`  
+3. **4. Open Presentation Generator** — launches the app  
+
+Later: **3. Update Presentation Generator** pulls the latest from GitHub and refreshes packages.
+
+If macOS blocks a shortcut: **right-click → Open → Open**.
 
 Or run once from the project folder:
 
