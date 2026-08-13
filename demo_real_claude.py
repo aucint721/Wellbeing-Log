@@ -76,7 +76,6 @@ Create an engaging, professional presentation now:"""
     message = client.messages.create(
         model="claude-sonnet-5",
         max_tokens=4000,
-        temperature=0.7,
         messages=[
             {"role": "user", "content": prompt}
         ]
