@@ -3,12 +3,26 @@
 # Ollama Configuration
 ollama:
   base_url: "http://localhost:11434"
+
+# Claude API Configuration (set ANTHROPIC_API_KEY in the environment)
+claude:
+  model_id: "claude-sonnet-5"
   
 # Available Models
 models:
+  claude:
+    name: "Claude Sonnet"
+    model_id: "claude-sonnet-5"
+    provider: "claude"
+    description: "Best quality - Punchy designer content via Claude API"
+    speed: "Fast"
+    quality: "Premium++"
+    best_for: "Polished presentations, best writing quality"
+
   dolphin_8b:
     name: "Dolphin 8B"
     model_id: "dolphin-llama3:8b"
+    provider: "ollama"
     description: "Fast generation - Great for quick drafts"
     speed: "Fast (5-10x faster)"
     quality: "Good"
@@ -17,6 +31,7 @@ models:
   dolphin_70b:
     name: "Dolphin 70B"
     model_id: "dolphin-llama3:70b"
+    provider: "ollama"
     description: "Premium quality - Best for professional presentations"
     speed: "Standard"
     quality: "Premium"
@@ -25,6 +40,7 @@ models:
   hermes:
     name: "Hermes"
     model_id: "hermes3"
+    provider: "ollama"
     description: "Advanced reasoning - Best for technical/educational content"
     speed: "Standard"
     quality: "Premium+"
@@ -35,7 +51,8 @@ presentation:
   default_slides: 10
   min_slides: 5
   max_slides: 30
-  default_theme: "modern"
+  default_theme: "sunset_gradient"
+  default_model: "claude"
   
 # Themes
 themes:
