@@ -8,17 +8,18 @@ import sys
 from presentation_generator import PresentationGenerator
 
 
-MODEL_CHOICES = ["claude", "dolphin_8b", "dolphin_70b", "hermes"]
-
-
 def main():
-    # Load themes/animations from config so CLI stays in sync with Web UI
+    # Load models/themes/animations from config so CLI stays in sync with Web UI
     preview = PresentationGenerator()
+    model_choices = list(preview.list_models().keys())
     theme_choices = list(preview.list_themes().keys())
     anim = preview.config.get("animations", {})
     transition_choices = list(anim.get("slide_transitions", {"fade": "Fade", "none": "None"}).keys())
     bullet_choices = list(anim.get("bullet_animations", {"appear": "Appear", "none": "None"}).keys())
     defaults = preview.config.get("presentation", {})
+    default_model = defaults.get("default_model", "claude")
+    if default_model not in model_choices and model_choices:
+        default_model = model_choices[0]
 
     parser = argparse.ArgumentParser(
         description="Generate designer presentations from text using Claude or local AI models",
@@ -26,13 +27,14 @@ def main():
         epilog="""
 Examples:
   python cli.py lesson_plan.txt -m claude -t photo_sunset --transition push --bullet-anim fly_left
-  python cli.py content.txt -m claude -t neon_cyber -n 10
+  python cli.py content.txt -m hermes_auditor -t neon_cyber -n 10
+  python cli.py notes.txt -m dolphin_hennie -t mint_fresh
   python cli.py --list-themes
 """,
     )
 
     parser.add_argument("input_file", nargs="?", help="Input text file (lesson plan, notes, etc.)")
-    parser.add_argument("-m", "--model", choices=MODEL_CHOICES, default="claude")
+    parser.add_argument("-m", "--model", choices=model_choices, default=default_model)
     parser.add_argument("-n", "--num-slides", type=int, default=10)
     parser.add_argument(
         "-t",

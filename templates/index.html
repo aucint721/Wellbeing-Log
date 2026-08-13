@@ -419,7 +419,7 @@ Topics:
                         {% endfor %}
                     </div>
                     <div id="modelStatusBanner" class="model-status-banner">Checking which models are ready…</div>
-                    <p class="hint">Claude needs <code>ANTHROPIC_API_KEY</code>. Hermes / Dolphin need the <strong>Ollama</strong> app running locally, then <code>ollama pull hermes3</code> (or the Dolphin model). Unavailable cards still explain what to install.</p>
+                    <p class="hint">Claude needs <code>ANTHROPIC_API_KEY</code>. Local cards use your Ollama models (<code>llama3:70b</code>, <code>hermes-auditor:latest</code>, <code>dolphin-hennie:latest</code>) — open the Ollama app so they show as Ready.</p>
                 </div>
 
                 <div class="form-group">
@@ -574,7 +574,7 @@ Topics:
 
                 if (data.ollama && !data.ollama.up) {
                     banner.className = 'model-status-banner warn';
-                    banner.innerHTML = 'Local models (Hermes, Dolphin) need <strong>Ollama</strong> running. Open the Ollama app on your Mac, then run <code>ollama pull hermes3</code>. Claude works without Ollama if your API key is set.';
+                    banner.innerHTML = 'Local models need <strong>Ollama</strong> running with your custom images (<code>llama3:70b</code>, <code>hermes-auditor:latest</code>, <code>dolphin-hennie:latest</code>). Open the Ollama app on your Mac. Claude works without Ollama if your API key is set.';
                 } else {
                     selectModel(selectedModel);
                 }

@@ -1,6 +1,6 @@
 # ✨ AI Presentation Generator — Enhanced Designer
 
-Create beautiful, designer-quality PowerPoint presentations from text using **Claude** (best quality) or your local Ollama models (Dolphin 8B, Dolphin 70B, Hermes).
+Create beautiful, designer-quality PowerPoint presentations from text using **Claude** (best quality) or your local Ollama models (`llama3:70b`, `hermes-auditor:latest`, `dolphin-hennie:latest`).
 
 ## ✨ Features
 
@@ -14,7 +14,7 @@ Create beautiful, designer-quality PowerPoint presentations from text using **Cl
 
 - Python 3.8+
 - For Claude: `ANTHROPIC_API_KEY` environment variable
-- For local models: Ollama running with `dolphin-llama3:8b`, `dolphin-llama3:70b`, and/or `hermes3`
+- For local models: Ollama running with `llama3:70b`, `hermes-auditor:latest`, and/or `dolphin-hennie:latest` (exact names from `ollama list`)
 
 ## 🚀 Quick Start
 
@@ -68,21 +68,24 @@ python cli.py --list-themes
 # Claude + Sunset Gradient (recommended)
 python cli.py lesson_plan.txt -m claude -t sunset_gradient -n 12
 
-# Quick local draft
-python cli.py notes.txt -m dolphin_8b -t mint_fresh
+# Quick local draft (your custom Dolphin)
+python cli.py notes.txt -m dolphin_hennie -t mint_fresh
 
-# Technical content with Hermes
-python cli.py lecture_notes.txt -m hermes -t education -n 20
+# Technical / auditor-style content
+python cli.py lecture_notes.txt -m hermes_auditor -t education -n 20
+
+# Local Llama 3 70B
+python cli.py notes.txt -m llama3_70b -t sunset_gradient
 ```
 
 ## 🤖 Model Selection Guide
 
-| Model | Provider | When to Use | Quality |
-|-------|----------|-------------|---------|
-| **Claude** | Anthropic API | Best writing & structure (default) | Premium++ |
-| **Dolphin 8B** | Ollama (local) | Quick drafts, offline | Good |
-| **Dolphin 70B** | Ollama (local) | Strong local quality | Premium |
-| **Hermes** | Ollama (local) | Technical / educational | Premium+ |
+| Model (UI / CLI key) | Ollama `model_id` | When to Use |
+|----------------------|-------------------|-------------|
+| **Claude** (`claude`) | Anthropic API | Best writing & structure (default) |
+| **Llama 3 70B** (`llama3_70b`) | `llama3:70b` | Strong local general-purpose |
+| **Hermes Auditor** (`hermes_auditor`) | `hermes-auditor:latest` | Technical / educational / review |
+| **Dolphin Hennie** (`dolphin_hennie`) | `dolphin-hennie:latest` | Fast local drafts in your style |
 
 ## 🎨 Available Themes
 
@@ -124,22 +127,18 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ## 🔧 Troubleshooting
 
-### Ollama: connection refused / Hermes or Dolphin errors
+### Ollama: connection refused / local model errors
 
-Hermes, Dolphin 8B, and Dolphin 70B run through **local Ollama**, not Claude. Claude does not need Ollama.
+`llama3:70b`, `hermes-auditor:latest`, and `dolphin-hennie:latest` run through **local Ollama**, not Claude. Claude does not need Ollama.
 
 ```bash
-# 1. Install Ollama from https://ollama.com and open the app (Mac)
-# 2. Confirm it is reachable
+# 1. Open the Ollama app (Mac) or run: ollama serve
+# 2. Confirm your models are listed exactly as configured
+ollama list
 curl http://localhost:11434/api/tags
-
-# 3. Pull the model you want
-ollama pull hermes3
-# or
-ollama pull dolphin-llama3:8b
 ```
 
-The Web UI marks each local model as **Ready** or **Needs setup** after checking Ollama. If you see a connection error, use **Claude** instead, or finish the Ollama setup above.
+The Web UI marks each local model as **Ready** or **Needs setup** after checking Ollama. Edit `config.yaml` `model_id` values if your local names differ.
 
 ### Claude: missing API key
 ```bash
@@ -147,10 +146,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ### Model not found (Ollama)
-```bash
-ollama pull hermes3
-ollama pull dolphin-llama3:8b
-```
+Confirm the name matches `ollama list` and `config.yaml`, e.g. `hermes-auditor:latest`.
 
 ## 🎉 Get Started
 
