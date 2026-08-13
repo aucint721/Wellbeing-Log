@@ -6,7 +6,7 @@ Supports generation history, outline preview, and re-theming saved outlines
 without calling the AI again.
 """
 
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from presentation_generator import PresentationGenerator
 import json
 import os
@@ -86,6 +86,8 @@ def _public_detail(meta: dict) -> dict:
         "filename": meta.get("filename"),
         "download_url": f"/download/{meta.get('filename')}",
         "outline": meta.get("outline", {}),
+        "slide_transition": meta.get("slide_transition", "fade"),
+        "bullet_animation": meta.get("bullet_animation", "appear"),
     }
 
 
@@ -95,6 +97,7 @@ def index():
     models = generator.list_models()
     themes = generator.themes
     defaults = generator.config.get("presentation", {})
+    anim = generator.config.get("animations", {})
     return render_template(
         "index.html",
         models=models,
@@ -102,6 +105,10 @@ def index():
         default_model=defaults.get("default_model", "claude"),
         default_theme=defaults.get("default_theme", "sunset_gradient"),
         default_slides=defaults.get("default_slides", 10),
+        default_slide_transition=defaults.get("default_slide_transition", "fade"),
+        default_bullet_animation=defaults.get("default_bullet_animation", "appear"),
+        slide_transitions=anim.get("slide_transitions", {}),
+        bullet_animations=anim.get("bullet_animations", {}),
     )
 
 
@@ -115,6 +122,12 @@ def get_models():
 def get_themes():
     """Get available themes"""
     return jsonify(generator.list_themes())
+
+
+@app.route("/theme_assets/<path:filename>")
+def theme_assets(filename):
+    """Serve photo theme preview/background images"""
+    return send_from_directory("theme_assets", filename)
 
 
 @app.route("/api/presentations")
@@ -156,7 +169,15 @@ def retheme_presentation(presentation_id):
         filename = f"presentation_{timestamp}_{new_id}.pptx"
         output_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
-        generator.create_presentation(outline, theme, output_path)
+        slide_transition = data.get("slide_transition", meta.get("slide_transition", "fade"))
+        bullet_animation = data.get("bullet_animation", meta.get("bullet_animation", "appear"))
+        generator.create_presentation(
+            outline,
+            theme,
+            output_path,
+            slide_transition=slide_transition,
+            bullet_animation=bullet_animation,
+        )
 
         new_meta = {
             "id": new_id,
@@ -167,6 +188,8 @@ def retheme_presentation(presentation_id):
             "num_slides": len(outline.get("slides", [])),
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "filename": filename,
+            "slide_transition": slide_transition,
+            "bullet_animation": bullet_animation,
             "source_id": safe_id,
             "retheme_of": safe_id,
         }
@@ -191,6 +214,8 @@ def generate():
         model_key = data.get("model", "claude")
         num_slides = int(data.get("num_slides", 10))
         theme = data.get("theme", "sunset_gradient")
+        slide_transition = data.get("slide_transition", "fade")
+        bullet_animation = data.get("bullet_animation", "appear")
 
         if not content:
             return jsonify({"error": "No content provided"}), 400
@@ -211,7 +236,13 @@ def generate():
 
         # Keep outline so we can preview and re-theme without another AI call
         outline = generator.generate_outline(content, model_key, num_slides)
-        generator.create_presentation(outline, theme, output_path)
+        generator.create_presentation(
+            outline,
+            theme,
+            output_path,
+            slide_transition=slide_transition,
+            bullet_animation=bullet_animation,
+        )
 
         meta = {
             "id": presentation_id,
@@ -222,6 +253,8 @@ def generate():
             "num_slides": len(outline.get("slides", [])),
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "filename": filename,
+            "slide_transition": slide_transition,
+            "bullet_animation": bullet_animation,
             "content_preview": content[:500],
         }
         _save_meta(meta)

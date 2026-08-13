@@ -235,12 +235,26 @@ Generate the presentation outline now:"""
         outline: Dict,
         theme_key: str = "modern",
         output_path: str = "presentation.pptx",
+        slide_transition: str = "fade",
+        bullet_animation: str = "appear",
     ) -> str:
-        """Create a designer-style PowerPoint presentation from an outline."""
+        """Create a polished PowerPoint presentation from an outline."""
         if theme_key not in self.themes:
             raise ValueError(f"Unknown theme: {theme_key}. Available: {list(self.themes)}")
 
+        anim_cfg = self.config.get("animations", {})
+        transitions = anim_cfg.get("slide_transitions", {"fade": "Fade", "none": "None"})
+        bullet_anims = anim_cfg.get("bullet_animations", {"appear": "Appear", "none": "None"})
+        if slide_transition not in transitions:
+            slide_transition = "fade"
+        if bullet_animation not in bullet_anims:
+            bullet_animation = "appear"
+
         theme = self.themes[theme_key]
+        self._active_theme = theme
+        self._slide_transition = slide_transition
+        self._bullet_animation = bullet_animation
+
         prs = Presentation()
         prs.slide_width = Inches(10)
         prs.slide_height = Inches(7.5)
@@ -257,7 +271,10 @@ Generate the presentation outline now:"""
             grad_start = primary
             grad_end = accent
 
-        print(f"Creating polished presentation with '{theme['name']}' theme...")
+        print(
+            f"Creating polished presentation with '{theme['name']}' "
+            f"(transition={slide_transition}, bullets={bullet_animation})..."
+        )
 
         for i, slide_data in enumerate(outline.get("slides", [])):
             slide_type = slide_data.get("type", "content")
@@ -275,27 +292,87 @@ Generate the presentation outline now:"""
             else:
                 slide = self._create_content_slide(prs, slide_data, primary, accent, text, bg)
 
-            self._add_transition(slide)
+            self._add_transition(slide, slide_transition)
             print(f"  ✓ Created slide {i + 1}: {slide_data.get('title', 'Untitled')}")
 
         prs.save(output_path)
         print(f"\n✓ Presentation saved: {output_path}")
         return output_path
 
-    def _add_transition(self, slide):
-        """Best-effort fade transition (supported by some pptx builds)."""
+    def _theme_image_path(self) -> Optional[str]:
+        theme = getattr(self, "_active_theme", {}) or {}
+        rel = theme.get("background_image")
+        if not rel:
+            return None
+        path = rel if os.path.isabs(rel) else os.path.join(os.getcwd(), rel)
+        return path if os.path.exists(path) else None
+
+    def _apply_photo_background(self, slide, prs):
+        """Add full-bleed photo background when theme provides an image."""
+        path = self._theme_image_path()
+        if not path:
+            return False
+        slide.shapes.add_picture(path, 0, 0, width=prs.slide_width, height=prs.slide_height)
+        return True
+
+    def _add_scrim(self, slide, prs, color: RGBColor, transparency: float = 0.35):
+        """Semi-transparent overlay so text stays readable on photo backgrounds."""
+        scrim = slide.shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
+        scrim.fill.solid()
+        scrim.fill.fore_color.rgb = color
+        scrim.fill.transparency = transparency
+        scrim.line.fill.background()
+        return scrim
+
+    def _add_transition(self, slide, transition: str = "fade"):
+        """Add a PowerPoint slide transition via OOXML."""
+        if not transition or transition == "none":
+            return
         try:
-            slide.slide.transition.type = 1  # Fade
+            sld = slide._element
+            for existing in sld.findall(f"{_P}transition"):
+                sld.remove(existing)
+
+            # Insert transition before timing if present
+            trans = etree.Element(f"{_P}transition", spd="med")
+            child_tag = {
+                "fade": "fade",
+                "push": "push",
+                "wipe": "wipe",
+            }.get(transition, "fade")
+            if child_tag == "push":
+                etree.SubElement(trans, f"{_P}push", dir="l")
+            elif child_tag == "wipe":
+                etree.SubElement(trans, f"{_P}wipe", dir="l")
+            else:
+                etree.SubElement(trans, f"{_P}fade")
+
+            timing = sld.find(f"{_P}timing")
+            if timing is not None:
+                timing.addprevious(trans)
+            else:
+                c_sld = sld.find(f"{_P}cSld")
+                if c_sld is not None:
+                    c_sld.addnext(trans)
+                else:
+                    sld.append(trans)
         except Exception:
             pass
 
     def _add_appear_animations(self, slide, shapes: List):
-        """Add sequential on-click Appear animations for the given shapes."""
-        if not shapes:
+        """Add sequential on-click animations for the given shapes."""
+        style = getattr(self, "_bullet_animation", "appear")
+        if not shapes or style == "none":
             return
+
+        effect_filter = {
+            "appear": "fade",
+            "fade": "fade",
+            "fly_left": "fly(fromLeft)",
+        }.get(style, "fade")
+
         try:
             sld = slide._element
-            # Remove any existing timing so we own the sequence
             for existing in sld.findall(f"{_P}timing"):
                 sld.remove(existing)
 
@@ -324,81 +401,61 @@ Generate the presentation outline now:"""
             next_id = 3
             for index, shape in enumerate(shapes):
                 shape_id = str(shape._element.get("id") or shape.shape_id)
-                delay = str(index * 250)
 
                 par2 = etree.SubElement(seq_children, f"{_P}par")
-                c_tn2 = etree.SubElement(
-                    par2,
-                    f"{_P}cTn",
-                    id=str(next_id),
-                    fill="hold",
-                )
+                c_tn2 = etree.SubElement(par2, f"{_P}cTn", id=str(next_id), fill="hold")
                 next_id += 1
                 st_cond = etree.SubElement(c_tn2, f"{_P}stCondLst")
-                etree.SubElement(st_cond, f"{_P}cond", delay=delay if index == 0 else "0")
-                if index > 0:
-                    # After previous click/animation — use on-click for each bullet
-                    pass
-                # On-click trigger for each bullet after the first
-                if index > 0:
-                    st_cond.clear()
+                if index == 0:
+                    etree.SubElement(st_cond, f"{_P}cond", delay="0")
+                else:
                     etree.SubElement(st_cond, f"{_P}cond", delay="0", evt="onClick")
 
                 child2 = etree.SubElement(c_tn2, f"{_P}childTnLst")
                 par3 = etree.SubElement(child2, f"{_P}par")
-                c_tn3 = etree.SubElement(
-                    par3,
-                    f"{_P}cTn",
-                    id=str(next_id),
-                    fill="hold",
-                )
+                c_tn3 = etree.SubElement(par3, f"{_P}cTn", id=str(next_id), fill="hold")
                 next_id += 1
                 st_cond3 = etree.SubElement(c_tn3, f"{_P}stCondLst")
                 etree.SubElement(st_cond3, f"{_P}cond", delay="0")
                 child3 = etree.SubElement(c_tn3, f"{_P}childTnLst")
 
-                # Appear effect (presetID 1 = appear)
                 anim_effect = etree.SubElement(
                     child3,
                     f"{_P}animEffect",
                     transition="in",
-                    filter="fade",
+                    filter=effect_filter,
                 )
                 c_bhvr = etree.SubElement(anim_effect, f"{_P}cBhvr")
-                c_tn4 = etree.SubElement(
-                    c_bhvr,
-                    f"{_P}cTn",
-                    id=str(next_id),
-                    dur="500",
-                )
+                etree.SubElement(c_bhvr, f"{_P}cTn", id=str(next_id), dur="500")
                 next_id += 1
                 tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
                 etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
 
-            # Required prevCondLst / nextCondLst stubs for main sequence
             prev = etree.SubElement(seq, f"{_P}prevCondLst")
             etree.SubElement(prev, f"{_P}cond", evt="onPrev", delay="0")
             nxt = etree.SubElement(seq, f"{_P}nextCondLst")
             etree.SubElement(nxt, f"{_P}cond", evt="onNext", delay="0")
         except Exception:
-            # Content still displays correctly without animations
             pass
 
     def _create_title_slide(self, prs, data, primary, accent, grad_start, grad_end):
-        """Polished title slide with geometric accents and tighter title sizing."""
+        """Polished title slide with geometric accents and optional photo background."""
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         shapes = slide.shapes
 
-        bg_shape1 = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
-        bg_shape1.fill.solid()
-        bg_shape1.fill.fore_color.rgb = grad_start
-        bg_shape1.line.fill.background()
+        if self._apply_photo_background(slide, prs):
+            self._add_scrim(slide, prs, primary, transparency=0.45)
+        else:
+            bg_shape1 = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
+            bg_shape1.fill.solid()
+            bg_shape1.fill.fore_color.rgb = grad_start
+            bg_shape1.line.fill.background()
 
-        bg_shape2 = shapes.add_shape(1, 0, Inches(3), prs.slide_width, Inches(4.5))
-        bg_shape2.fill.solid()
-        bg_shape2.fill.fore_color.rgb = grad_end
-        bg_shape2.fill.transparency = 0.3
-        bg_shape2.line.fill.background()
+            bg_shape2 = shapes.add_shape(1, 0, Inches(3), prs.slide_width, Inches(4.5))
+            bg_shape2.fill.solid()
+            bg_shape2.fill.fore_color.rgb = grad_end
+            bg_shape2.fill.transparency = 0.3
+            bg_shape2.line.fill.background()
 
         circle1 = shapes.add_shape(
             MSO_SHAPE.OVAL, Inches(8), Inches(-0.5), Inches(2.5), Inches(2.5)
@@ -445,20 +502,23 @@ Generate the presentation outline now:"""
         return slide
 
     def _create_section_slide(self, prs, data, primary, accent, grad_start, grad_end):
-        """Polished section divider with geometric accents."""
+        """Polished section divider with geometric accents / photo background."""
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         shapes = slide.shapes
 
-        bg1 = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
-        bg1.fill.solid()
-        bg1.fill.fore_color.rgb = grad_start
-        bg1.line.fill.background()
+        if self._apply_photo_background(slide, prs):
+            self._add_scrim(slide, prs, primary, transparency=0.5)
+        else:
+            bg1 = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
+            bg1.fill.solid()
+            bg1.fill.fore_color.rgb = grad_start
+            bg1.line.fill.background()
 
-        bg2 = shapes.add_shape(1, 0, Inches(2), prs.slide_width, Inches(5.5))
-        bg2.fill.solid()
-        bg2.fill.fore_color.rgb = grad_end
-        bg2.fill.transparency = 0.4
-        bg2.line.fill.background()
+            bg2 = shapes.add_shape(1, 0, Inches(2), prs.slide_width, Inches(5.5))
+            bg2.fill.solid()
+            bg2.fill.fore_color.rgb = grad_end
+            bg2.fill.transparency = 0.4
+            bg2.line.fill.background()
 
         for i, offset in enumerate([0, 0.3, 0.6]):
             bar = shapes.add_shape(
@@ -492,10 +552,13 @@ Generate the presentation outline now:"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         shapes = slide.shapes
 
-        bg = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
-        bg.fill.solid()
-        bg.fill.fore_color.rgb = accent
-        bg.line.fill.background()
+        if self._apply_photo_background(slide, prs):
+            self._add_scrim(slide, prs, accent, transparency=0.35)
+        else:
+            bg = shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
+            bg.fill.solid()
+            bg.fill.fore_color.rgb = accent
+            bg.line.fill.background()
 
         for i, size in enumerate([2.5, 2, 1.5]):
             ring = shapes.add_shape(
@@ -522,9 +585,27 @@ Generate the presentation outline now:"""
         return slide
 
     def _create_content_slide(self, prs, data, primary, accent, text, bg):
-        """Polished content slide: tight header, spaced bullets, appear animations."""
+        """Polished content slide: tight header, spaced bullets, animations."""
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         shapes = slide.shapes
+        is_photo = self._apply_photo_background(slide, prs)
+
+        if is_photo:
+            self._add_scrim(slide, prs, primary, transparency=0.45)
+            panel = shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(0.55),
+                Inches(0.45),
+                Inches(8.9),
+                Inches(6.6),
+            )
+            panel.fill.solid()
+            panel.fill.fore_color.rgb = RGBColor(252, 252, 252)
+            panel.fill.transparency = 0.06
+            panel.line.fill.background()
+            body_text = RGBColor(30, 30, 30)
+        else:
+            body_text = text
 
         header1 = shapes.add_shape(1, 0, 0, prs.slide_width, Inches(1.2))
         header1.fill.solid()
@@ -579,7 +660,7 @@ Generate the presentation outline now:"""
                 p = text_frame.paragraphs[0]
                 p.text = "• " + bullet
                 p.font.size = Pt(20)
-                p.font.color.rgb = text
+                p.font.color.rgb = body_text
                 p.line_spacing = 1.2
                 animated_shapes.append(bullet_box)
 
@@ -601,6 +682,8 @@ Generate the presentation outline now:"""
         num_slides: int = 10,
         theme: str = "modern",
         output_path: str = "presentation.pptx",
+        slide_transition: str = "fade",
+        bullet_animation: str = "appear",
     ) -> str:
         """Complete pipeline: text -> outline -> polished designer presentation."""
         print(f"\n{'=' * 60}")
@@ -609,10 +692,17 @@ Generate the presentation outline now:"""
         print(f"Model: {self.models[model_key]['name']}")
         print(f"Theme: {self.themes[theme]['name']}")
         print(f"Slides: {num_slides}")
+        print(f"Transition: {slide_transition} | Bullet animation: {bullet_animation}")
         print(f"{'=' * 60}\n")
 
         outline = self.generate_outline(content, model_key, num_slides)
-        result_path = self.create_presentation(outline, theme, output_path)
+        result_path = self.create_presentation(
+            outline,
+            theme,
+            output_path,
+            slide_transition=slide_transition,
+            bullet_animation=bullet_animation,
+        )
 
         print(f"\n{'=' * 60}")
         print("✓ SUCCESS! Presentation created")

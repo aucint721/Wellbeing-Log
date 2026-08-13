@@ -53,6 +53,21 @@ presentation:
   max_slides: 30
   default_theme: "sunset_gradient"
   default_model: "claude"
+  default_slide_transition: "fade"
+  default_bullet_animation: "appear"
+
+# Animation option catalogs (used by Web UI / CLI)
+animations:
+  slide_transitions:
+    none: "None"
+    fade: "Fade"
+    push: "Push"
+    wipe: "Wipe"
+  bullet_animations:
+    none: "None"
+    appear: "Appear (click)"
+    fade: "Fade in (click)"
+    fly_left: "Fly from left (click)"
   
 # Themes
 themes:
@@ -160,3 +175,64 @@ themes:
     background: [255, 255, 255]
     text_color: [38, 50, 56]
     gradient_colors: [[0, 137, 123], [38, 166, 154]]
+
+  # PHOTO-LIKE THEMES (background images in theme_assets/)
+  photo_ocean:
+    name: "Photo Ocean"
+    style: "photo"
+    primary_color: [8, 40, 80]
+    accent_color: [0, 188, 212]
+    background: [8, 40, 80]
+    text_color: [255, 255, 255]
+    gradient_colors: [[8, 40, 80], [20, 140, 180]]
+    background_image: "theme_assets/photo_ocean.jpg"
+
+  photo_forest:
+    name: "Photo Forest"
+    style: "photo"
+    primary_color: [10, 40, 20]
+    accent_color: [129, 199, 132]
+    background: [10, 40, 20]
+    text_color: [255, 255, 255]
+    gradient_colors: [[10, 40, 20], [50, 120, 60]]
+    background_image: "theme_assets/photo_forest.jpg"
+
+  photo_sunset:
+    name: "Photo Sunset"
+    style: "photo"
+    primary_color: [120, 40, 50]
+    accent_color: [255, 175, 64]
+    background: [120, 40, 50]
+    text_color: [255, 255, 255]
+    gradient_colors: [[40, 20, 60], [255, 120, 60]]
+    background_image: "theme_assets/photo_sunset.jpg"
+
+  photo_mountain:
+    name: "Photo Mountain"
+    style: "photo"
+    primary_color: [30, 40, 70]
+    accent_color: [180, 190, 210]
+    background: [30, 40, 70]
+    text_color: [255, 255, 255]
+    gradient_colors: [[30, 40, 70], [180, 190, 210]]
+    background_image: "theme_assets/photo_mountain.jpg"
+
+  photo_city_night:
+    name: "Photo City Night"
+    style: "photo"
+    primary_color: [5, 8, 25]
+    accent_color: [255, 200, 80]
+    background: [5, 8, 25]
+    text_color: [255, 255, 255]
+    gradient_colors: [[5, 8, 25], [40, 20, 70]]
+    background_image: "theme_assets/photo_city_night.jpg"
+
+  photo_desert:
+    name: "Photo Desert"
+    style: "photo"
+    primary_color: [160, 90, 40]
+    accent_color: [255, 210, 140]
+    background: [160, 90, 40]
+    text_color: [255, 255, 255]
+    gradient_colors: [[180, 110, 50], [255, 210, 140]]
+    background_image: "theme_assets/photo_desert.jpg"
