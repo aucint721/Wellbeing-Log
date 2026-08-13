@@ -40,7 +40,8 @@ echo ""
 
 # Check for models
 echo "Checking for required models..."
-models=("dolphin-llama3:8b" "dolphin-llama3:70b" "hermes3")
+# Must match model_id values in config.yaml
+models=("llama3:70b" "hermes-auditor:latest" "dolphin-hennie:latest")
 missing_models=()
 
 for model in "${models[@]}"; do

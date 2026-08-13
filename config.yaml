@@ -19,32 +19,33 @@ models:
     quality: "Premium++"
     best_for: "Polished presentations, best writing quality"
 
-  dolphin_8b:
-    name: "Dolphin 8B"
-    model_id: "dolphin-llama3:8b"
+  # Local custom Ollama models (names must match `ollama list` exactly)
+  llama3_70b:
+    name: "Llama 3 70B"
+    model_id: "llama3:70b"
     provider: "ollama"
-    description: "Fast generation - Great for quick drafts"
-    speed: "Fast (5-10x faster)"
-    quality: "Good"
-    best_for: "Quick iterations, simple content"
-    
-  dolphin_70b:
-    name: "Dolphin 70B"
-    model_id: "dolphin-llama3:70b"
-    provider: "ollama"
-    description: "Premium quality - Best for professional presentations"
+    description: "Local Llama 3 70B — strong general-purpose writing"
     speed: "Standard"
     quality: "Premium"
-    best_for: "Professional business presentations"
-    
-  hermes:
-    name: "Hermes"
-    model_id: "hermes3"
+    best_for: "General presentations, longer context"
+
+  hermes_auditor:
+    name: "Hermes Auditor"
+    model_id: "hermes-auditor:latest"
     provider: "ollama"
-    description: "Advanced reasoning - Best for technical/educational content"
+    description: "Your custom Hermes Auditor — careful, structured content"
     speed: "Standard"
     quality: "Premium+"
-    best_for: "Technical, educational, complex topics"
+    best_for: "Technical, educational, review-style decks"
+
+  dolphin_hennie:
+    name: "Dolphin Hennie"
+    model_id: "dolphin-hennie:latest"
+    provider: "ollama"
+    description: "Your custom Dolphin — fast local drafts in your style"
+    speed: "Fast"
+    quality: "Good+"
+    best_for: "Quick iterations, personal voice"
 
 # Presentation Settings
 presentation:

@@ -31,17 +31,12 @@ ollama serve
 ollama list
 ```
 
-You should see:
-- `dolphin-llama3:8b`
-- `dolphin-llama3:70b`
-- `hermes3` (or similar)
+You should see (exact names used by this project):
+- `llama3:70b`
+- `hermes-auditor:latest`
+- `dolphin-hennie:latest`
 
-**If models are missing**, pull them:
-```bash
-ollama pull dolphin-llama3:8b
-ollama pull dolphin-llama3:70b
-ollama pull hermes3
-```
+If a name differs on your machine, update the matching `model_id` in `config.yaml`.
 
 ## Step 3: Choose Your Interface
 
@@ -60,7 +55,7 @@ Then open: **http://localhost:5000**
 python cli.py example_lesson_plan.txt
 
 # Use your own file
-python cli.py my_content.txt -m dolphin_70b -n 15
+python cli.py my_content.txt -m dolphin_hennie -n 15
 ```
 
 ## 🎉 That's It!
@@ -73,13 +68,13 @@ You now have a FREE presentation generator that rivals $20-30/month services!
 **Solution:** Install dependencies: `pip install -r requirements.txt`
 
 ### Problem: "Connection refused to localhost:11434"
-**Solution:** Start Ollama: `ollama serve`
+**Solution:** Start Ollama: open the Ollama app, or `ollama serve`
 
 ### Problem: "Model not found"
-**Solution:** Pull the model: `ollama pull dolphin-llama3:70b`
+**Solution:** Run `ollama list` and make sure `config.yaml` `model_id` matches exactly (e.g. `hermes-auditor:latest`)
 
 ### Problem: Slow generation
-**Solution:** Use Dolphin 8B instead: `-m dolphin_8b`
+**Solution:** Use Dolphin Hennie instead: `-m dolphin_hennie`
 
 ## 📖 Next Steps
 

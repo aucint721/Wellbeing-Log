@@ -117,6 +117,17 @@
             background: #fff7ed;
         }
 
+        .option-card.unavailable {
+            opacity: 0.72;
+            border-style: dashed;
+            background: #f8fafc;
+        }
+
+        .option-card.unavailable.selected {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+
         .option-card h3 {
             color: #0f172a;
             margin-bottom: 6px;
@@ -140,6 +151,30 @@
         }
 
         .badge.claude { background: #ea580c; }
+        .badge.ready { background: #16a34a; }
+        .badge.needs-setup { background: #b45309; }
+
+        .model-status-banner {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 0.92em;
+            line-height: 1.45;
+        }
+
+        .model-status-banner.warn {
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .model-status-line {
+            margin-top: 8px;
+            font-size: 0.82em;
+            color: #b45309;
+            line-height: 1.35;
+        }
 
         .swatch {
             height: 28px;
@@ -374,15 +409,17 @@ Topics:
                     <label>🤖 Select AI Model</label>
                     <div class="options-grid" id="modelOptions">
                         {% for key, model in models.items() %}
-                        <div class="option-card" data-model="{{ key }}" onclick="selectModel('{{ key }}')">
+                        <div class="option-card" data-model="{{ key }}" data-provider="{{ model.provider|default('ollama') }}" data-model-id="{{ model.model_id }}" onclick="selectModel('{{ key }}')">
                             <h3>{{ model.name }}</h3>
                             <p>{{ model.description }}</p>
                             <p><strong>Quality:</strong> {{ model.quality }} · <strong>Speed:</strong> {{ model.speed }}</p>
                             <span class="badge {% if model.provider == 'claude' %}claude{% endif %}">{{ model.best_for }}</span>
+                            <div class="model-status-line" data-status-for="{{ key }}"></div>
                         </div>
                         {% endfor %}
                     </div>
-                    <p class="hint">Claude requires <code>ANTHROPIC_API_KEY</code>. Local models require Ollama running.</p>
+                    <div id="modelStatusBanner" class="model-status-banner">Checking which models are ready…</div>
+                    <p class="hint">Claude needs <code>ANTHROPIC_API_KEY</code>. Local cards use your Ollama models (<code>llama3:70b</code>, <code>hermes-auditor:latest</code>, <code>dolphin-hennie:latest</code>) — open the Ollama app so they show as Ready.</p>
                 </div>
 
                 <div class="form-group">
@@ -484,12 +521,67 @@ Topics:
         let selectedModel = {{ default_model|tojson }};
         let selectedTheme = {{ default_theme|tojson }};
         let currentPresentation = null;
+        let modelAvailability = {};
 
         function selectModel(model) {
             selectedModel = model;
-            document.querySelectorAll('[data-model]').forEach(el => el.classList.remove('selected'));
-            const card = document.querySelector(`[data-model="${model}"]`);
+            document.querySelectorAll('#modelOptions [data-model]').forEach(el => el.classList.remove('selected'));
+            const card = document.querySelector(`#modelOptions [data-model="${model}"]`);
             if (card) card.classList.add('selected');
+
+            const info = modelAvailability[model];
+            const banner = document.getElementById('modelStatusBanner');
+            if (info && !info.available) {
+                banner.className = 'model-status-banner warn';
+                banner.innerHTML = `<strong>${escapeHtml(info.name || model)} needs setup:</strong> ${escapeHtml(info.status || 'Not available')}`;
+            } else if (info) {
+                banner.className = 'model-status-banner';
+                banner.innerHTML = `<strong>${escapeHtml(info.name || model)}</strong> — ${escapeHtml(info.status || 'Ready')}`;
+            }
+        }
+
+        async function refreshModelAvailability() {
+            const banner = document.getElementById('modelStatusBanner');
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+                const models = data.models || data;
+                modelAvailability = models;
+
+                Object.keys(models).forEach(key => {
+                    const info = models[key];
+                    const card = document.querySelector(`#modelOptions [data-model="${key}"]`);
+                    const statusEl = document.querySelector(`[data-status-for="${key}"]`);
+                    if (!card) return;
+
+                    card.classList.toggle('unavailable', !info.available);
+                    let badge = card.querySelector('.badge.ready, .badge.needs-setup');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'badge';
+                        card.appendChild(badge);
+                    }
+                    if (info.available) {
+                        badge.className = 'badge ready';
+                        badge.textContent = 'Ready';
+                        if (statusEl) statusEl.textContent = '';
+                    } else {
+                        badge.className = 'badge needs-setup';
+                        badge.textContent = 'Needs setup';
+                        if (statusEl) statusEl.textContent = info.status || '';
+                    }
+                });
+
+                if (data.ollama && !data.ollama.up) {
+                    banner.className = 'model-status-banner warn';
+                    banner.innerHTML = 'Local models need <strong>Ollama</strong> running with your custom images (<code>llama3:70b</code>, <code>hermes-auditor:latest</code>, <code>dolphin-hennie:latest</code>). Open the Ollama app on your Mac. Claude works without Ollama if your API key is set.';
+                } else {
+                    selectModel(selectedModel);
+                }
+            } catch (err) {
+                banner.className = 'model-status-banner warn';
+                banner.textContent = 'Could not check model availability. Claude still works if ANTHROPIC_API_KEY is set; local models need Ollama.';
+            }
         }
 
         function selectTheme(theme) {
@@ -660,6 +752,7 @@ Topics:
 
         selectModel(selectedModel);
         selectTheme(selectedTheme);
+        refreshModelAvailability();
         loadHistory();
 
         document.getElementById('presentationForm').addEventListener('submit', async (e) => {
