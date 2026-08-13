@@ -93,7 +93,13 @@ python cli.py notes.txt -m llama3_70b -t sunset_gradient
 
 **Designer:** Neon Cyberpunk, Sunset Gradient (default), Ocean Deep, Lavender Dream, Forest Minimal, Royal Purple, Coral Pink, Midnight Blue, Mint Fresh
 
-Add your own in `config.yaml` with `primary_color`, `accent_color`, `background`, `text_color`, and optional `gradient_colors`.
+**Photo (Unsplash backgrounds):** Ocean, Forest, Sunset, Mountain, City Night, Desert, Classroom, Library, Chalkboard, Aurora, Beach, Workspace, Flowers, Lake, Snow, Rain
+
+Add color themes in `config.yaml` with `primary_color`, `accent_color`, `background`, `text_color`, and optional `gradient_colors`. Photo themes also set `style: photo` and `background_image: theme_assets/...`. Refresh photos with `python scripts/fetch_theme_photos.py`.
+
+## 🎬 Transitions & text-line animations
+
+Choose in the Web UI or CLI (`--transition`, `--bullet-anim`). Catalog lives in `config.yaml` under `animations:` — slide transitions (fade, push, wipe, cover, split, zoom, …) and per-line bullet effects (fade in, fly from sides, wipe, zoom, float up, …).
 
 ## 🛠️ Configuration
 
@@ -114,11 +120,13 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ```
 .
-├── config.yaml                  # Models + 13 themes
+├── config.yaml                  # Models + themes + animation catalogs
 ├── presentation_generator.py    # Core designer engine
 ├── cli.py                       # Command-line interface
 ├── web_ui.py                    # Flask web interface
 ├── templates/index.html         # Web UI
+├── theme_assets/                # Photo theme backgrounds (Unsplash)
+├── scripts/fetch_theme_photos.py
 ├── demo_designer_claude.py      # Standalone designer demo
 ├── demo_enhanced_claude.py      # Standalone enhanced demo
 ├── requirements.txt

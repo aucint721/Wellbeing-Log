@@ -433,19 +433,30 @@ Generate the presentation outline now:"""
             for existing in sld.findall(f"{_P}transition"):
                 sld.remove(existing)
 
-            # Slow fade reads better; advance on click
+            # Slow transitions read better; advance on click
             trans = etree.Element(f"{_P}transition", spd="slow", advClick="1")
-            child_tag = {
-                "fade": "fade",
-                "push": "push",
-                "wipe": "wipe",
-            }.get(transition, "fade")
-            if child_tag == "push":
-                etree.SubElement(trans, f"{_P}push", dir="l")
-            elif child_tag == "wipe":
-                etree.SubElement(trans, f"{_P}wipe", dir="l")
-            else:
-                etree.SubElement(trans, f"{_P}fade")
+
+            # Map UI keys → OOXML transition child (+ optional attrs)
+            builders = {
+                "fade": lambda t: etree.SubElement(t, f"{_P}fade"),
+                "dissolve": lambda t: etree.SubElement(t, f"{_P}dissolve"),
+                "cut": lambda t: etree.SubElement(t, f"{_P}cut"),
+                "push": lambda t: etree.SubElement(t, f"{_P}push", dir="l"),
+                "wipe": lambda t: etree.SubElement(t, f"{_P}wipe", dir="l"),
+                "cover": lambda t: etree.SubElement(t, f"{_P}cover", dir="l"),
+                "pull": lambda t: etree.SubElement(t, f"{_P}pull", dir="l"),
+                "reveal": lambda t: etree.SubElement(t, f"{_P}wipe", dir="u"),  # closest simple reveal
+                "split": lambda t: etree.SubElement(t, f"{_P}split", orient="horz", dir="out"),
+                "strips": lambda t: etree.SubElement(t, f"{_P}strips", dir="ld"),
+                "comb": lambda t: etree.SubElement(t, f"{_P}comb", dir="horz"),
+                "circle": lambda t: etree.SubElement(t, f"{_P}circle"),
+                "diamond": lambda t: etree.SubElement(t, f"{_P}diamond"),
+                "plus": lambda t: etree.SubElement(t, f"{_P}plus"),
+                "newsflash": lambda t: etree.SubElement(t, f"{_P}newsflash"),
+                "wheel": lambda t: etree.SubElement(t, f"{_P}wheel", spokes="4"),
+                "zoom": lambda t: etree.SubElement(t, f"{_P}zoom", dir="in"),
+            }
+            (builders.get(transition) or builders["fade"])(trans)
 
             timing = sld.find(f"{_P}timing")
             if timing is not None:
@@ -619,15 +630,38 @@ Generate the presentation outline now:"""
             "fade_in_out": "fade",
             "appear": "fade",
             "fly_left": "fly(fromLeft)",
+            "fly_right": "fly(fromRight)",
+            "fly_top": "fly(fromTop)",
+            "fly_bottom": "fly(fromBottom)",
+            "wipe": "wipe(fromLeft)",
+            "zoom": "zoom",
+            "float_up": "fly(fromBottom)",
+            "split": "split(horizontalOut)",
         }.get(style, "fade")
-        # PowerPoint preset IDs: 1=Appear, 10=Fade, 2=Fly
+        # PowerPoint preset IDs (entrance): 1=Appear, 2=Fly, 10=Fade, 22=Wipe, 23=Zoom, 42≈Float
         preset_id = {
             "appear": "1",
             "fade_in": "10",
             "fade_in_out": "10",
             "fly_left": "2",
+            "fly_right": "2",
+            "fly_top": "2",
+            "fly_bottom": "2",
+            "wipe": "22",
+            "zoom": "23",
+            "float_up": "42",
+            "split": "16",
         }.get(style, "10")
-        preset_subtype = "8" if style == "fly_left" else "0"  # 8 = from left
+        preset_subtype = {
+            "fly_left": "8",      # from left
+            "fly_right": "2",     # from right
+            "fly_top": "1",       # from top
+            "fly_bottom": "4",    # from bottom
+            "wipe": "8",
+            "zoom": "16",
+            "float_up": "8",
+            "split": "21",
+        }.get(style, "0")
         enter_dur = "350" if style == "appear" else "500"
         do_fade_out = style == "fade_in_out"
         use_anim_effect = style != "appear"

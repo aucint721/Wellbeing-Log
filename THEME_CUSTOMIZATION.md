@@ -19,7 +19,7 @@ You can easily add unlimited custom themes by editing `config.yaml`. Here's ever
 
 ## 🎨 Theme Structure
 
-Each theme has 4 colors:
+Each color theme has 4–5 colors:
 
 ```yaml
 theme_name:
@@ -28,7 +28,26 @@ theme_name:
   accent_color: [R, G, B]     # Highlights, conclusion slide
   background: [R, G, B]       # Slide background
   text_color: [R, G, B]       # Main text color
+  gradient_colors: [[R,G,B], [R,G,B]]  # optional
 ```
+
+### Photo themes (Unsplash)
+
+Photo themes add a full-bleed background image. Images live in `theme_assets/` (downloaded from Unsplash; refresh with `python scripts/fetch_theme_photos.py`).
+
+```yaml
+photo_beach:
+  name: "Photo Beach"
+  style: "photo"
+  primary_color: [2, 62, 94]       # scrim / header tint
+  accent_color: [255, 213, 79]
+  background: [2, 62, 94]          # fallback if image missing
+  text_color: [255, 255, 255]
+  gradient_colors: [[2, 62, 94], [0, 150, 199]]
+  background_image: "theme_assets/photo_beach.jpg"
+```
+
+`background_image` must be a **local path** (the generator embeds the file into the PPTX). Do not put a remote URL there.
 
 ---
 
