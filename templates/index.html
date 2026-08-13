@@ -149,6 +149,19 @@
             border: 1px solid rgba(0,0,0,0.06);
         }
 
+        .swatch.photo-swatch {
+            height: 48px;
+            background-image: var(--photo), linear-gradient(90deg, var(--primary), var(--accent));
+            background-size: cover;
+            background-position: center;
+        }
+
+        .anim-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
         input[type="number"], select {
             width: 100%;
             max-width: 280px;
@@ -377,12 +390,36 @@ Topics:
                     <div class="themes-grid" id="themeOptions">
                         {% for key, theme in themes.items() %}
                         <div class="option-card" data-theme="{{ key }}" onclick="selectTheme('{{ key }}')"
-                             style="--primary: rgb({{ theme.primary_color | join(',') }}); --accent: rgb({{ theme.accent_color | join(',') }});">
-                            <div class="swatch"></div>
+                             style="--primary: rgb({{ theme.primary_color | join(',') }}); --accent: rgb({{ theme.accent_color | join(',') }});{% if theme.background_image %} --photo: url('/{{ theme.background_image }}');{% endif %}">
+                            <div class="swatch {% if theme.style == 'photo' %}photo-swatch{% endif %}"></div>
                             <h3>{{ theme.name }}</h3>
+                            {% if theme.style == 'photo' %}<p>Photo look</p>{% endif %}
                         </div>
                         {% endfor %}
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label>🎬 Animations</label>
+                    <div class="anim-row">
+                        <div>
+                            <label for="slideTransition" style="font-size:0.9em;font-weight:600;">Slide transition</label>
+                            <select id="slideTransition">
+                                {% for key, label in slide_transitions.items() %}
+                                <option value="{{ key }}" {% if key == default_slide_transition %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bulletAnimation" style="font-size:0.9em;font-weight:600;">Bullet / text lines</label>
+                            <select id="bulletAnimation">
+                                {% for key, label in bullet_animations.items() %}
+                                <option value="{{ key }}" {% if key == default_bullet_animation %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <p class="hint">Transitions change slides; bullet animations play in PowerPoint Slide Show (click to reveal lines).</p>
                 </div>
 
                 <div class="form-group">
@@ -409,15 +446,25 @@ Topics:
                 </div>
             </div>
 
-            <label>🎨 Apply another theme (no AI call — instant rebuild)</label>
+            <label>🎨 Apply another theme / animation (no AI call)</label>
             <div class="retheme-row">
                 <select id="rethemeSelect">
                     {% for key, theme in themes.items() %}
                     <option value="{{ key }}">{{ theme.name }}</option>
                     {% endfor %}
                 </select>
+                <select id="rethemeTransition">
+                    {% for key, label in slide_transitions.items() %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <select id="rethemeBulletAnim">
+                    {% for key, label in bullet_animations.items() %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
                 <button type="button" class="secondary-btn" id="rethemeBtn" onclick="rethemeCurrent()">
-                    Rebuild with this theme
+                    Rebuild
                 </button>
             </div>
             <p class="hint">Browsers can’t fully embed PowerPoint. This shows your slide outline; download the PPTX for the designed slides + animations.</p>
@@ -495,6 +542,8 @@ Topics:
             dl.href = detail.download_url;
             dl.download = detail.filename || 'presentation.pptx';
             document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
+            if (detail.slide_transition) document.getElementById('rethemeTransition').value = detail.slide_transition;
+            if (detail.bullet_animation) document.getElementById('rethemeBulletAnim').value = detail.bullet_animation;
             document.getElementById('outlinePreview').innerHTML = renderOutline(detail.outline);
             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
             loadHistory(detail.id);
@@ -537,19 +586,20 @@ Topics:
         async function rethemeCurrent() {
             if (!currentPresentation) return;
             const theme = document.getElementById('rethemeSelect').value;
+            const slide_transition = document.getElementById('rethemeTransition').value;
+            const bullet_animation = document.getElementById('rethemeBulletAnim').value;
             const btn = document.getElementById('rethemeBtn');
             const statusDiv = document.getElementById('status');
             btn.disabled = true;
             statusDiv.className = 'status loading';
             statusDiv.classList.remove('hidden');
-            statusDiv.innerHTML = '<span class="spinner"></span>Rebuilding with new theme (no AI call)…';
+            statusDiv.innerHTML = '<span class="spinner"></span>Rebuilding (no AI call)…';
             try {
                 const res = await fetch(`/api/presentations/${currentPresentation.id}/retheme`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ theme })
-                });
-                const data = await res.json();
+                    body: JSON.stringify({ theme, slide_transition, bullet_animation })
+                });                const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Retheme failed');
                 showPresentation(data);
                 statusDiv.className = 'status success';
@@ -587,7 +637,9 @@ Topics:
                         content: content,
                         model: selectedModel,
                         num_slides: parseInt(numSlides, 10),
-                        theme: selectedTheme
+                        theme: selectedTheme,
+                        slide_transition: document.getElementById('slideTransition').value,
+                        bullet_animation: document.getElementById('bulletAnimation').value
                     })
                 });
 
