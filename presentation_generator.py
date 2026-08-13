@@ -505,18 +505,107 @@ Generate the presentation outline now:"""
             filter=effect_filter,
         )
         c_bhvr = etree.SubElement(anim, f"{_P}cBhvr")
-        # Native PowerPoint omits fill on animEffect; holding here can leave text invisible.
         etree.SubElement(c_bhvr, f"{_P}cTn", id=next_id_fn(), dur=dur_ms)
         tgt = etree.SubElement(c_bhvr, f"{_P}tgtEl")
         etree.SubElement(tgt, f"{_P}spTgt", spid=shape_id)
+
+    def _add_click_build(
+        self,
+        seq_children,
+        alloc_id,
+        shape_id: str,
+        *,
+        preset_id: str,
+        preset_subtype: str,
+        effect_filter: str,
+        enter_dur: str,
+        use_anim_effect: bool,
+        hide_prev_id: Optional[str] = None,
+    ):
+        """
+        One PowerPoint click group:
+
+        outer (delay=indefinite) → mid (delay=0) → effect (clickEffect) → set[/animEffect]
+
+        This 3-level nesting + bldLst entry is what Mac/Windows PowerPoint expects.
+        """
+        # Outer click-group: waits for click
+        outer_par = etree.SubElement(seq_children, f"{_P}par")
+        outer_tn = etree.SubElement(outer_par, f"{_P}cTn", id=alloc_id(), fill="hold")
+        outer_st = etree.SubElement(outer_tn, f"{_P}stCondLst")
+        etree.SubElement(outer_st, f"{_P}cond", delay="indefinite")
+        outer_kids = etree.SubElement(outer_tn, f"{_P}childTnLst")
+
+        # Middle wrapper
+        mid_par = etree.SubElement(outer_kids, f"{_P}par")
+        mid_tn = etree.SubElement(mid_par, f"{_P}cTn", id=alloc_id(), fill="hold")
+        mid_st = etree.SubElement(mid_tn, f"{_P}stCondLst")
+        etree.SubElement(mid_st, f"{_P}cond", delay="0")
+        mid_kids = etree.SubElement(mid_tn, f"{_P}childTnLst")
+
+        # Optional: fade out previous line in the same click
+        if hide_prev_id:
+            exit_par = etree.SubElement(mid_kids, f"{_P}par")
+            # Attribute order matches PowerPoint exports
+            exit_tn = etree.SubElement(
+                exit_par,
+                f"{_P}cTn",
+                id=alloc_id(),
+                presetID="10",
+                presetClass="exit",
+                presetSubtype="0",
+                fill="hold",
+                grpId="0",
+                nodeType="withEffect",
+            )
+            exit_st = etree.SubElement(exit_tn, f"{_P}stCondLst")
+            etree.SubElement(exit_st, f"{_P}cond", delay="0")
+            exit_kids = etree.SubElement(exit_tn, f"{_P}childTnLst")
+            self._anim_effect(
+                exit_kids,
+                hide_prev_id,
+                alloc_id,
+                transition="out",
+                effect_filter="fade",
+                dur_ms="400",
+            )
+            self._anim_set_visibility(exit_kids, hide_prev_id, False, alloc_id, delay="400")
+
+        # Entrance effect for this line
+        effect_par = etree.SubElement(mid_kids, f"{_P}par")
+        # Attribute order matches PowerPoint: presetID, presetClass, presetSubtype, fill, grpId, nodeType
+        effect_attrs = {
+            "id": alloc_id(),
+            "presetID": preset_id,
+            "presetClass": "entr",
+            "presetSubtype": preset_subtype,
+            "fill": "hold",
+            "grpId": "0",
+            "nodeType": "clickEffect",
+        }
+        effect_tn = etree.SubElement(effect_par, f"{_P}cTn", **effect_attrs)
+        effect_st = etree.SubElement(effect_tn, f"{_P}stCondLst")
+        etree.SubElement(effect_st, f"{_P}cond", delay="0")
+        effect_kids = etree.SubElement(effect_tn, f"{_P}childTnLst")
+
+        self._anim_set_visibility(effect_kids, shape_id, True, alloc_id, delay="0")
+        if use_anim_effect:
+            self._anim_effect(
+                effect_kids,
+                shape_id,
+                alloc_id,
+                transition="in",
+                effect_filter=effect_filter,
+                dur_ms=enter_dur,
+            )
 
     def _add_appear_animations(self, slide, shapes: List):
         """
         Sequential on-click text-line animations.
 
-        Structure mirrors PowerPoint's own exports:
-        clickEffect cTn → childTnLst → [set visibility, animEffect]
-        (no extra nested par wrappers, which Mac PowerPoint often ignores).
+        Uses PowerPoint's real click-group skeleton (3 nested pars) plus a
+        p:bldLst/p:bldP entry per shape so slideshow clicks reveal lines
+        instead of advancing the slide.
         """
         style = getattr(self, "_bullet_animation", "fade_in")
         # Back-compat with older saved UI values
@@ -541,6 +630,7 @@ Generate the presentation outline now:"""
         preset_subtype = "8" if style == "fly_left" else "0"  # 8 = from left
         enter_dur = "350" if style == "appear" else "500"
         do_fade_out = style == "fade_in_out"
+        use_anim_effect = style != "appear"
 
         try:
             sld = slide._element
@@ -570,6 +660,16 @@ Generate the presentation outline now:"""
             )
             seq_children = etree.SubElement(seq_tn, f"{_P}childTnLst")
 
+            # PowerPoint requires sldTgt inside prev/next conditions
+            prev = etree.SubElement(seq, f"{_P}prevCondLst")
+            prev_cond = etree.SubElement(prev, f"{_P}cond", evt="onPrev", delay="0")
+            etree.SubElement(etree.SubElement(prev_cond, f"{_P}tgtEl"), f"{_P}sldTgt")
+            nxt = etree.SubElement(seq, f"{_P}nextCondLst")
+            next_cond = etree.SubElement(nxt, f"{_P}cond", evt="onNext", delay="0")
+            etree.SubElement(etree.SubElement(next_cond, f"{_P}tgtEl"), f"{_P}sldTgt")
+
+            bld_lst = etree.SubElement(timing, f"{_P}bldLst")
+
             next_id = 3
 
             def alloc_id() -> str:
@@ -581,52 +681,20 @@ Generate the presentation outline now:"""
             shape_ids = [self._shape_spid(shape) for shape in shapes]
 
             for index, spid in enumerate(shape_ids):
-                step = etree.SubElement(seq_children, f"{_P}par")
-                # grpId is required for PowerPoint to treat this as a real build effect
-                step_tn = etree.SubElement(
-                    step,
-                    f"{_P}cTn",
-                    id=alloc_id(),
-                    fill="hold",
-                    nodeType="clickEffect",
-                    presetID=preset_id,
-                    presetClass="entr",
-                    presetSubtype=preset_subtype,
-                    grpId=str(index),
+                hide_prev = shape_ids[index - 1] if do_fade_out and index > 0 else None
+                self._add_click_build(
+                    seq_children,
+                    alloc_id,
+                    spid,
+                    preset_id=preset_id,
+                    preset_subtype=preset_subtype,
+                    effect_filter=effect_filter,
+                    enter_dur=enter_dur,
+                    use_anim_effect=use_anim_effect,
+                    hide_prev_id=hide_prev,
                 )
-                step_st = etree.SubElement(step_tn, f"{_P}stCondLst")
-                etree.SubElement(step_st, f"{_P}cond", delay="indefinite")
-                # Direct children — same shape PowerPoint writes (no nested par/cTn)
-                step_kids = etree.SubElement(step_tn, f"{_P}childTnLst")
-
-                if do_fade_out and index > 0:
-                    prev_id = shape_ids[index - 1]
-                    self._anim_effect(
-                        step_kids,
-                        prev_id,
-                        alloc_id,
-                        transition="out",
-                        effect_filter="fade",
-                        dur_ms="400",
-                    )
-                    self._anim_set_visibility(step_kids, prev_id, False, alloc_id, delay="400")
-
-                # Appear = visibility only; fade/fly also run animEffect
-                self._anim_set_visibility(step_kids, spid, True, alloc_id, delay="0")
-                if style != "appear":
-                    self._anim_effect(
-                        step_kids,
-                        spid,
-                        alloc_id,
-                        transition="in",
-                        effect_filter=effect_filter,
-                        dur_ms=enter_dur,
-                    )
-
-            prev = etree.SubElement(seq, f"{_P}prevCondLst")
-            etree.SubElement(prev, f"{_P}cond", evt="onPrev", delay="0")
-            nxt = etree.SubElement(seq, f"{_P}nextCondLst")
-            etree.SubElement(nxt, f"{_P}cond", evt="onNext", delay="0")
+                # Ties the entrance effect into PowerPoint's animation build list
+                etree.SubElement(bld_lst, f"{_P}bldP", spid=spid, grpId="0")
         except Exception as exc:
             print(f"Warning: could not add text-line animations: {exc}")
 
