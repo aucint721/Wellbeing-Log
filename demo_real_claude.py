@@ -81,7 +81,13 @@ Create an engaging, professional presentation now:"""
         ]
     )
     
-    response_text = message.content[0].text.strip()
+    # Claude Sonnet 5 may return thinking blocks - extract text content
+    response_text = ""
+    for block in message.content:
+        if hasattr(block, 'text'):
+            response_text += block.text
+    
+    response_text = response_text.strip()
     
     # Extract JSON
     json_start = response_text.find('{')
