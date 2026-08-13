@@ -273,11 +273,21 @@ Generate the presentation outline now:"""
 
         print(
             f"Creating polished presentation with '{theme['name']}' "
-            f"(transition={slide_transition}, bullets={bullet_animation})..."
+            f"(default transition={slide_transition}, default bullets={bullet_animation})..."
         )
 
         for i, slide_data in enumerate(outline.get("slides", [])):
             slide_type = slide_data.get("type", "content")
+            # Per-slide overrides (fallback to presentation defaults)
+            this_transition = slide_data.get("transition") or slide_transition
+            this_bullet_anim = slide_data.get("bullet_animation") or bullet_animation
+            if this_transition not in transitions:
+                this_transition = slide_transition
+            if this_bullet_anim not in bullet_anims:
+                this_bullet_anim = bullet_animation
+
+            # Content slides use text-line animation; others only use slide transition
+            self._bullet_animation = this_bullet_anim if slide_type == "content" else "none"
 
             if slide_type == "title":
                 slide = self._create_title_slide(
@@ -292,12 +302,43 @@ Generate the presentation outline now:"""
             else:
                 slide = self._create_content_slide(prs, slide_data, primary, accent, text, bg)
 
-            self._add_transition(slide, slide_transition)
-            print(f"  ✓ Created slide {i + 1}: {slide_data.get('title', 'Untitled')}")
+            self._add_transition(slide, this_transition)
+            print(
+                f"  ✓ Created slide {i + 1}: {slide_data.get('title', 'Untitled')} "
+                f"[transition={this_transition}"
+                + (f", lines={this_bullet_anim}]" if slide_type == "content" else "]")
+            )
 
         prs.save(output_path)
         print(f"\n✓ Presentation saved: {output_path}")
         return output_path
+
+    def apply_default_slide_animations(
+        self,
+        outline: Dict,
+        slide_transition: str = "fade",
+        bullet_animation: str = "fade_in",
+        overwrite: bool = False,
+    ) -> Dict:
+        """Stamp each slide with transition/bullet_animation defaults when missing."""
+        anim_cfg = self.config.get("animations", {})
+        transitions = anim_cfg.get("slide_transitions", {})
+        bullet_anims = anim_cfg.get("bullet_animations", {})
+        if slide_transition not in transitions:
+            slide_transition = "fade"
+        if bullet_animation not in bullet_anims:
+            bullet_animation = "fade_in"
+
+        for slide in outline.get("slides", []):
+            if overwrite or not slide.get("transition"):
+                slide["transition"] = slide_transition
+            if slide.get("type", "content") == "content":
+                if overwrite or not slide.get("bullet_animation"):
+                    slide["bullet_animation"] = bullet_animation
+            else:
+                # Non-content slides don't use text-line animations
+                slide.pop("bullet_animation", None)
+        return outline
 
     def _theme_image_path(self) -> Optional[str]:
         theme = getattr(self, "_active_theme", {}) or {}
@@ -780,6 +821,12 @@ Generate the presentation outline now:"""
         print(f"{'=' * 60}\n")
 
         outline = self.generate_outline(content, model_key, num_slides)
+        outline = self.apply_default_slide_animations(
+            outline,
+            slide_transition=slide_transition,
+            bullet_animation=bullet_animation,
+            overwrite=True,
+        )
         result_path = self.create_presentation(
             outline,
             theme,

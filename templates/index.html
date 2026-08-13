@@ -334,9 +334,25 @@
         .history-item h3 { font-size: 1em; margin-bottom: 4px; }
         .history-item p { color: #64748b; font-size: 0.85em; }
 
-        .empty-history {
+        .slide-anim-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .slide-anim-controls label {
+            font-size: 0.8em;
+            margin-bottom: 4px;
             color: #64748b;
-            font-size: 0.95em;
+        }
+
+        .slide-anim-controls select {
+            max-width: none;
+            padding: 8px 10px;
+            font-size: 0.92em;
         }
     </style>
 </head>
@@ -467,9 +483,13 @@ Topics:
                     Rebuild
                 </button>
             </div>
-            <p class="hint">Browsers can’t fully embed PowerPoint. This shows your slide outline; download the PPTX for the designed slides + animations.</p>
+            <p class="hint">Browsers can’t fully embed PowerPoint. Edit each slide’s transition / text animation below, then click Rebuild. Download the PPTX for Slide Show.</p>
 
             <div id="outlinePreview" style="margin-top: 18px;"></div>
+            <div class="retheme-row" style="margin-top: 14px;">
+                <button type="button" class="secondary-btn" onclick="applyDefaultsToAllSlides()">Apply top defaults to all slides</button>
+                <button type="button" class="secondary-btn" id="applySlideAnimsBtn" onclick="rebuildWithPerSlideSettings()">Save per-slide animations &amp; rebuild</button>
+            </div>
         </div>
 
         <div class="side-card">
@@ -484,6 +504,8 @@ Topics:
         let selectedModel = {{ default_model|tojson }};
         let selectedTheme = {{ default_theme|tojson }};
         let currentPresentation = null;
+        const SLIDE_TRANSITIONS = {{ slide_transitions|tojson }};
+        const BULLET_ANIMATIONS = {{ bullet_animations|tojson }};
 
         function selectModel(model) {
             selectedModel = model;
@@ -551,11 +573,20 @@ Topics:
             link.remove();
         }
 
+        function optionsHtml(map, selected) {
+            return Object.entries(map || {}).map(([key, label]) =>
+                `<option value="${escapeHtml(key)}" ${key === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`
+            ).join('');
+        }
+
         function renderOutline(outline) {
             const slides = (outline && outline.slides) || [];
             if (!slides.length) {
                 return '<p class="empty-history">No outline available.</p>';
             }
+            const defaultTrans = (currentPresentation && currentPresentation.slide_transition) || 'fade';
+            const defaultBullet = (currentPresentation && currentPresentation.bullet_animation) || 'fade_in';
+
             return slides.map((slide, idx) => {
                 const type = slide.type || 'content';
                 const title = escapeHtml(slide.title || 'Untitled');
@@ -564,15 +595,63 @@ Topics:
                     .map(b => `<li>${escapeHtml(b)}</li>`)
                     .join('');
                 const bulletsHtml = bullets ? `<ul>${bullets}</ul>` : '';
+                const selectedTrans = slide.transition || defaultTrans;
+                const selectedBullet = slide.bullet_animation || defaultBullet;
+                const textControls = type === 'content' ? `
+                    <div>
+                        <label>Text lines</label>
+                        <select class="slide-bullet-anim" data-idx="${idx}">
+                            ${optionsHtml(BULLET_ANIMATIONS, selectedBullet)}
+                        </select>
+                    </div>` : `
+                    <div>
+                        <label>Text lines</label>
+                        <select disabled><option>N/A for ${escapeHtml(type)} slides</option></select>
+                    </div>`;
+
                 return `
-                    <div class="slide-preview">
+                    <div class="slide-preview" data-slide-idx="${idx}">
                         <div class="slide-type">Slide ${idx + 1} · ${escapeHtml(type)}</div>
                         <h3>${title}</h3>
                         ${subtitle}
                         ${bulletsHtml}
+                        <div class="slide-anim-controls">
+                            <div>
+                                <label>Slide transition</label>
+                                <select class="slide-transition" data-idx="${idx}">
+                                    ${optionsHtml(SLIDE_TRANSITIONS, selectedTrans)}
+                                </select>
+                            </div>
+                            ${textControls}
+                        </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function collectOutlineFromPreview() {
+            if (!currentPresentation || !currentPresentation.outline) return null;
+            const outline = JSON.parse(JSON.stringify(currentPresentation.outline));
+            const slides = outline.slides || [];
+            slides.forEach((slide, idx) => {
+                const trans = document.querySelector(`select.slide-transition[data-idx="${idx}"]`);
+                const bullet = document.querySelector(`select.slide-bullet-anim[data-idx="${idx}"]`);
+                if (trans) slide.transition = trans.value;
+                if ((slide.type || 'content') === 'content') {
+                    if (bullet) slide.bullet_animation = bullet.value;
+                } else {
+                    delete slide.bullet_animation;
+                }
+            });
+            return outline;
+        }
+
+        function applyDefaultsToAllSlides() {
+            if (!currentPresentation) return;
+            const trans = document.getElementById('rethemeTransition').value;
+            const bullet = document.getElementById('rethemeBulletAnim').value;
+            document.querySelectorAll('select.slide-transition').forEach(el => { el.value = trans; });
+            document.querySelectorAll('select.slide-bullet-anim').forEach(el => { el.value = bullet; });
         }
 
         function showPresentation(detail) {
@@ -587,7 +666,8 @@ Topics:
             dl.onclick = (e) => {
                 e.preventDefault();
                 downloadPresentation(detail.filename, detail.download_url);
-            };            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
+            };
+            document.getElementById('rethemeSelect').value = detail.theme || selectedTheme;
             if (detail.slide_transition) document.getElementById('rethemeTransition').value = detail.slide_transition;
             if (detail.bullet_animation) document.getElementById('rethemeBulletAnim').value = detail.bullet_animation;
             document.getElementById('outlinePreview').innerHTML = renderOutline(detail.outline);
@@ -629,11 +709,51 @@ Topics:
             showPresentation(data);
         }
 
+        async function rebuildWithPerSlideSettings() {
+            if (!currentPresentation) return;
+            const outline = collectOutlineFromPreview();
+            if (!outline) return;
+            const theme = document.getElementById('rethemeSelect').value;
+            const slide_transition = document.getElementById('rethemeTransition').value;
+            const bullet_animation = document.getElementById('rethemeBulletAnim').value;
+            const btn = document.getElementById('applySlideAnimsBtn');
+            const statusDiv = document.getElementById('status');
+            btn.disabled = true;
+            statusDiv.className = 'status loading';
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = '<span class="spinner"></span>Rebuilding with per-slide animations…';
+            try {
+                const res = await fetch(`/api/presentations/${currentPresentation.id}/retheme`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        theme,
+                        slide_transition,
+                        bullet_animation,
+                        outline,
+                        apply_defaults_to_all: false
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Rebuild failed');
+                showPresentation(data);
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `✓ Per-slide animations saved. <a class="download-btn" href="${data.download_url}" onclick="event.preventDefault(); downloadPresentation('${data.filename}', '${data.download_url}');">Download</a>`;
+            } catch (err) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `✗ Error: ${escapeHtml(err.message)}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         async function rethemeCurrent() {
             if (!currentPresentation) return;
             const theme = document.getElementById('rethemeSelect').value;
             const slide_transition = document.getElementById('rethemeTransition').value;
             const bullet_animation = document.getElementById('rethemeBulletAnim').value;
+            // Keep any per-slide edits currently shown, unless user wants defaults applied via the other button
+            const outline = collectOutlineFromPreview() || currentPresentation.outline;
             const btn = document.getElementById('rethemeBtn');
             const statusDiv = document.getElementById('status');
             btn.disabled = true;
@@ -644,8 +764,15 @@ Topics:
                 const res = await fetch(`/api/presentations/${currentPresentation.id}/retheme`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ theme, slide_transition, bullet_animation })
-                });                const data = await res.json();
+                    body: JSON.stringify({
+                        theme,
+                        slide_transition,
+                        bullet_animation,
+                        outline,
+                        apply_defaults_to_all: false
+                    })
+                });
+                const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Retheme failed');
                 showPresentation(data);
                 statusDiv.className = 'status success';
