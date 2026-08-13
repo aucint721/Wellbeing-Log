@@ -26,7 +26,22 @@ pip install -r requirements.txt
 
 ### 2. Choose Your Interface
 
-#### Option A: Web UI
+#### Option A: Desktop App (easiest on Mac)
+
+```bash
+pip install -r requirements.txt
+./install_desktop_shortcut.sh
+```
+
+Then double-click **Presentation Generator** on your Desktop.
+
+Or run once from the project folder:
+
+```bash
+python desktop_app.py
+```
+
+#### Option B: Web UI in browser
 
 ```bash
 export ANTHROPIC_API_KEY=your_key_here   # for Claude
@@ -37,17 +52,12 @@ Open http://localhost:5050
 
 (Port defaults to **5050** so it doesn’t clash with macOS AirPlay on 5000. Override with `PORT=8080 python web_ui.py` if needed.)
 
-#### Option B: Command Line
+#### Option C: Command Line
 
 ```bash
-# Best quality with Claude + designer theme
 export ANTHROPIC_API_KEY=your_key_here
 python cli.py example_lesson_plan.txt -m claude -n 12 -t sunset_gradient
-
-# Local Ollama
-python cli.py my_content.txt -m dolphin_8b -n 10 -t neon_cyber -o my_presentation.pptx
 ```
-
 ## 🎯 Usage Examples
 
 ```bash

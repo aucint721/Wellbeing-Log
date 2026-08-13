@@ -8,6 +8,7 @@ This repo is a Python AI Presentation Generator (CLI + Flask Web UI). Designer l
 
 | Service | Command | Notes |
 |---------|---------|-------|
+| Desktop app | `python desktop_app.py` | Native window via `pywebview` (falls back to browser). Install Desktop icon with `./install_desktop_shortcut.sh` |
 | Web UI | `python web_ui.py` | http://localhost:5050 — Flask on `0.0.0.0` (default port **5050** to avoid macOS AirPlay on 5000; override with `PORT=...`) |
 | CLI | `python cli.py <input.txt> -m claude -t sunset_gradient` | Core generation path |
 
