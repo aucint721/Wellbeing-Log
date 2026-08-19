@@ -44,18 +44,10 @@ python3 certificate_generator.py \
   -b "For exceptional dedication and support in the classroom" \
   -n "Emily Rodriguez" \
   -d "June 2026" \
-  -s "Jane Smith" \
-  --signature-title "Principal"
+  -s "Jane Smith"
 ```
 
-### Avoid duplicate titles
-If your signature already includes the title (e.g., "Principal Jane Smith"), set signature title to empty:
-```bash
-python3 certificate_generator.py \
-  -o my_certificate.pptx \
-  -s "Principal Jane Smith" \
-  --signature-title ""
-```
+**Note:** The title "Principal" is automatically added below the signature name.
 
 ### Try different themes
 ```bash
@@ -78,8 +70,7 @@ python3 certificate_generator.py -o cert.pptx --theme forest_minimal
 | `-t, --title` | Certificate title | `Certificate of Recognition` |
 | `-b, --body` | Body text | `In recognition of outstanding dedication...` |
 | `-d, --date` | Date of recognition | `[Date]` |
-| `-s, --signature` | Signature line name | `[Principal/Administrator Name]` |
-| `--signature-title` | Title below signature | `Principal` |
+| `-s, --signature` | Principal name (title "Principal" added automatically) | `[Name]` |
 | `--theme` | Theme name | `royal_purple` |
 | `--list-themes` | List all available themes | - |
 

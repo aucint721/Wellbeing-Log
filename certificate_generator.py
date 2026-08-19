@@ -28,8 +28,7 @@ class CertificateGenerator:
         title: str = "Certificate of Recognition",
         body_text: str = "In recognition of outstanding dedication and service as a Teacher Aide",
         date: str = "[Date]",
-        signature_line: str = "[Principal/Administrator Name]",
-        signature_title: str = "Principal",
+        signature_line: str = "[Name]",
         theme: str = "royal_purple"
     ):
         """
@@ -41,8 +40,7 @@ class CertificateGenerator:
             title: Certificate title
             body_text: Main recognition text
             date: Date of recognition
-            signature_line: Name for signature line
-            signature_title: Title below signature (e.g., "Principal", "Administrator", leave blank for none)
+            signature_line: Name for signature line (title "Principal" is automatically added below)
             theme: Theme from config.yaml (default: royal_purple for formal certificates)
         """
         
@@ -192,18 +190,17 @@ class CertificateGenerator:
         sig_frame.paragraphs[0].font.size = Pt(14)
         sig_frame.paragraphs[0].font.color.rgb = text_color
         
-        # Signature title (only add if not empty)
-        if signature_title:
-            sig_title_box = slide.shapes.add_textbox(
-                Inches(5.5), Inches(6.05),
-                Inches(3), Inches(0.3)
-            )
-            sig_title_frame = sig_title_box.text_frame
-            sig_title_frame.text = signature_title
-            sig_title_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
-            sig_title_frame.paragraphs[0].font.size = Pt(11)
-            sig_title_frame.paragraphs[0].font.italic = True
-            sig_title_frame.paragraphs[0].font.color.rgb = text_color
+        # Signature title
+        sig_title_box = slide.shapes.add_textbox(
+            Inches(5.5), Inches(6.05),
+            Inches(3), Inches(0.3)
+        )
+        sig_title_frame = sig_title_box.text_frame
+        sig_title_frame.text = "Principal"
+        sig_title_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+        sig_title_frame.paragraphs[0].font.size = Pt(11)
+        sig_title_frame.paragraphs[0].font.italic = True
+        sig_title_frame.paragraphs[0].font.color.rgb = text_color
         
         # Save
         prs.save(output_file)
@@ -307,17 +304,9 @@ def interactive_mode():
     if not date:
         date = "[Date]"
     
-    signature_line = input("Signature name [[Principal/Administrator Name]]: ").strip()
+    signature_line = input("Principal name [[Name]]: ").strip()
     if not signature_line:
-        signature_line = "[Principal/Administrator Name]"
-    
-    signature_title = input("Title below signature (e.g., Principal, Administrator) [Principal]: ").strip()
-    if signature_title == "":
-        signature_title = "Principal"
-    
-    print("\n💡 Tip: Leave signature title blank (type 'none') if your signature name already includes the title")
-    if signature_title.lower() in ['none', 'blank', 'empty', '']:
-        signature_title = ""
+        signature_line = "[Name]"
     
     # Confirmation
     print("\n" + "="*60)
@@ -329,8 +318,7 @@ def interactive_mode():
     print(f"Recipient: {recipient_name}")
     print(f"Body: {body_text}")
     print(f"Date: {date}")
-    print(f"Signature: {signature_line}")
-    print(f"Signature title: {signature_title if signature_title else '(none)'}")
+    print(f"Principal name: {signature_line}")
     print("="*60)
     
     confirm = input("\nCreate certificate? [Y/n]: ").strip().lower()
@@ -346,7 +334,6 @@ def interactive_mode():
         body_text=body_text,
         date=date,
         signature_line=signature_line,
-        signature_title=signature_title,
         theme=theme
     )
 
@@ -391,13 +378,8 @@ def main():
     )
     parser.add_argument(
         "-s", "--signature",
-        default="[Principal/Administrator Name]",
-        help="Name for signature line"
-    )
-    parser.add_argument(
-        "--signature-title",
-        default="Principal",
-        help="Title below signature (default: Principal). Use empty string for none."
+        default="[Name]",
+        help="Principal name for signature line (title 'Principal' is automatically added)"
     )
     parser.add_argument(
         "--theme",
@@ -439,7 +421,6 @@ def main():
         body_text=args.body,
         date=args.date,
         signature_line=args.signature,
-        signature_title=args.signature_title,
         theme=args.theme
     )
 
