@@ -44,7 +44,17 @@ python3 certificate_generator.py \
   -b "For exceptional dedication and support in the classroom" \
   -n "Emily Rodriguez" \
   -d "June 2026" \
-  -s "Principal Jane Smith"
+  -s "Jane Smith" \
+  --signature-title "Principal"
+```
+
+### Avoid duplicate titles
+If your signature already includes the title (e.g., "Principal Jane Smith"), set signature title to empty:
+```bash
+python3 certificate_generator.py \
+  -o my_certificate.pptx \
+  -s "Principal Jane Smith" \
+  --signature-title ""
 ```
 
 ### Try different themes
