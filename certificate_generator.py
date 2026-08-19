@@ -20,6 +20,28 @@ class CertificateGenerator:
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
         self.themes = self.config["themes"]
+    
+    def _add_logo_placeholder(self, slide, primary_color):
+        """Add a placeholder box for the logo."""
+        logo_placeholder = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(4.25), Inches(1.0),
+            Inches(1.5), Inches(1.5)
+        )
+        logo_placeholder.fill.solid()
+        logo_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
+        logo_placeholder.line.color.rgb = primary_color
+        logo_placeholder.line.width = Pt(2)
+        logo_placeholder.line.dash_style = 2  # Dashed line
+        
+        # Logo placeholder text
+        logo_text = logo_placeholder.text_frame
+        logo_text.text = "INSERT\nSCHOOL\nLOGO\nHERE"
+        logo_text.paragraphs[0].alignment = PP_ALIGN.CENTER
+        for paragraph in logo_text.paragraphs:
+            paragraph.font.size = Pt(10)
+            paragraph.font.color.rgb = RGBColor(150, 150, 150)
+            paragraph.font.bold = True
 
     def create_certificate(
         self,
@@ -42,6 +64,7 @@ class CertificateGenerator:
             body_text: Main recognition text
             date: Date of recognition
             signature_line: Name for signature line (title "Principal" is automatically added below)
+            logo_path: Path to logo image file (PNG, JPG, etc.) - if None, shows placeholder
             theme: Theme from config.yaml (default: royal_purple for formal certificates)
         """
         
@@ -90,26 +113,23 @@ class CertificateGenerator:
         inner_border.line.color.rgb = accent_color
         inner_border.line.width = Pt(2)
         
-        # Logo placeholder box (top center)
-        logo_placeholder = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE,
-            Inches(4.25), Inches(1.0),
-            Inches(1.5), Inches(1.5)
-        )
-        logo_placeholder.fill.solid()
-        logo_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
-        logo_placeholder.line.color.rgb = primary_color
-        logo_placeholder.line.width = Pt(2)
-        logo_placeholder.line.dash_style = 2  # Dashed line
-        
-        # Logo placeholder text
-        logo_text = logo_placeholder.text_frame
-        logo_text.text = "INSERT\nSCHOOL\nLOGO\nHERE"
-        logo_text.paragraphs[0].alignment = PP_ALIGN.CENTER
-        for paragraph in logo_text.paragraphs:
-            paragraph.font.size = Pt(10)
-            paragraph.font.color.rgb = RGBColor(150, 150, 150)
-            paragraph.font.bold = True
+        # Logo - insert actual image if provided, otherwise show placeholder
+        if logo_path and os.path.exists(logo_path):
+            try:
+                # Insert actual logo
+                logo_pic = slide.shapes.add_picture(
+                    logo_path,
+                    Inches(4.25), Inches(1.0),
+                    width=Inches(1.5)
+                )
+                # Maintain aspect ratio - adjust height based on width
+            except Exception as e:
+                print(f"Warning: Could not insert logo from {logo_path}: {e}")
+                # Fall back to placeholder
+                self._add_logo_placeholder(slide, primary_color)
+        else:
+            # Show placeholder box
+            self._add_logo_placeholder(slide, primary_color)
         
         # Title
         title_box = slide.shapes.add_textbox(
@@ -308,6 +328,23 @@ def interactive_mode():
     if not signature_line:
         signature_line = "[Name]"
     
+    # Logo file path
+    print("\n" + "-"*60)
+    print("SCHOOL LOGO:")
+    print("-"*60)
+    logo_path = input("\nPath to logo file (PNG/JPG) [leave blank for placeholder]: ").strip()
+    
+    # Validate logo path
+    if logo_path:
+        # Expand ~ to home directory
+        logo_path = os.path.expanduser(logo_path)
+        if not os.path.exists(logo_path):
+            print(f"⚠️  Warning: File not found: {logo_path}")
+            print("   Will use placeholder instead.")
+            logo_path = None
+        else:
+            print(f"✓ Logo file found: {logo_path}")
+    
     # Generate unique filename based on recipient name
     def sanitize_filename(name):
         """Convert a name to a safe filename."""
@@ -340,6 +377,7 @@ def interactive_mode():
     print(f"Body: {body_text}")
     print(f"Date: {date}")
     print(f"Principal name: {signature_line}")
+    print(f"Logo: {logo_path if logo_path else 'Placeholder box'}")
     print("="*60)
     
     confirm = input("\nCreate certificate? [Y/n]: ").strip().lower()
@@ -355,6 +393,7 @@ def interactive_mode():
         body_text=body_text,
         date=date,
         signature_line=signature_line,
+        logo_path=logo_path,
         theme=theme
     )
 
@@ -403,6 +442,11 @@ def main():
         help="Principal name for signature line (title 'Principal' is automatically added)"
     )
     parser.add_argument(
+        "--logo",
+        default=None,
+        help="Path to logo image file (PNG, JPG, etc.)"
+    )
+    parser.add_argument(
         "--theme",
         default="royal_purple",
         help="Theme name from config.yaml (default: royal_purple)"
@@ -442,6 +486,7 @@ def main():
         body_text=args.body,
         date=args.date,
         signature_line=args.signature,
+        logo_path=args.logo,
         theme=args.theme
     )
 
