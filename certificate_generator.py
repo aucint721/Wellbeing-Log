@@ -214,9 +214,139 @@ class CertificateGenerator:
         print(f"  4. Position and resize the logo as needed")
 
 
+def interactive_mode():
+    """Interactive mode - ask user for all options."""
+    import sys
+    
+    generator = CertificateGenerator()
+    
+    print("\n" + "="*60)
+    print("         CERTIFICATE GENERATOR - INTERACTIVE MODE")
+    print("="*60)
+    print()
+    
+    # Output filename
+    output_file = input("Output filename [teacher_aide_certificate.pptx]: ").strip()
+    if not output_file:
+        output_file = "teacher_aide_certificate.pptx"
+    
+    # Show theme options
+    print("\n" + "-"*60)
+    print("AVAILABLE THEMES:")
+    print("-"*60)
+    
+    # Organize themes by category
+    recommended = ["royal_purple", "education", "midnight_blue", "forest_minimal"]
+    modern = ["sunset_gradient", "ocean_deep", "lavender_dream", "mint_fresh", "coral_pink"]
+    photo = [k for k in generator.themes.keys() if k.startswith("photo_")]
+    
+    print("\n📌 RECOMMENDED FOR CERTIFICATES:")
+    for i, key in enumerate(recommended, 1):
+        if key in generator.themes:
+            print(f"  {i}. {key:20} - {generator.themes[key]['name']}")
+    
+    print("\n🎨 MODERN THEMES:")
+    start = len(recommended) + 1
+    for i, key in enumerate(modern, start):
+        if key in generator.themes:
+            print(f"  {i}. {key:20} - {generator.themes[key]['name']}")
+    
+    print(f"\n📷 PHOTO BACKGROUNDS: (type 'photo' to see {len(photo)} photo themes)")
+    
+    print("-"*60)
+    
+    # Theme selection
+    theme_input = input(f"\nSelect theme [1-{start + len(modern) - 1}] or name [royal_purple]: ").strip()
+    
+    if theme_input.lower() == 'photo':
+        print("\n📷 PHOTO THEMES:")
+        for i, key in enumerate(photo, 1):
+            print(f"  {i}. {key:25} - {generator.themes[key]['name']}")
+        photo_choice = input(f"\nSelect photo theme [1-{len(photo)}] or name: ").strip()
+        if photo_choice.isdigit() and 1 <= int(photo_choice) <= len(photo):
+            theme = photo[int(photo_choice) - 1]
+        elif photo_choice in photo:
+            theme = photo_choice
+        else:
+            theme = "royal_purple"
+    elif theme_input.isdigit():
+        choice_num = int(theme_input)
+        all_themes = recommended + modern
+        if 1 <= choice_num <= len(all_themes):
+            theme = all_themes[choice_num - 1]
+        else:
+            theme = "royal_purple"
+    elif theme_input in generator.themes:
+        theme = theme_input
+    else:
+        theme = "royal_purple"
+    
+    print(f"✓ Selected theme: {generator.themes[theme]['name']}")
+    
+    # Certificate details
+    print("\n" + "-"*60)
+    print("CERTIFICATE DETAILS:")
+    print("-"*60)
+    
+    title = input("\nCertificate title [Certificate of Recognition]: ").strip()
+    if not title:
+        title = "Certificate of Recognition"
+    
+    recipient_name = input("Recipient name [[Recipient Name] for blank template]: ").strip()
+    if not recipient_name:
+        recipient_name = "[Recipient Name]"
+    
+    body_text = input("Recognition text [In recognition of outstanding dedication...]: ").strip()
+    if not body_text:
+        body_text = "In recognition of outstanding dedication and service as a Teacher Aide"
+    
+    date = input("Date [[Date] for blank template]: ").strip()
+    if not date:
+        date = "[Date]"
+    
+    signature_line = input("Signature name [[Principal/Administrator Name]]: ").strip()
+    if not signature_line:
+        signature_line = "[Principal/Administrator Name]"
+    
+    # Confirmation
+    print("\n" + "="*60)
+    print("PREVIEW:")
+    print("="*60)
+    print(f"Output file: {output_file}")
+    print(f"Theme: {generator.themes[theme]['name']}")
+    print(f"Title: {title}")
+    print(f"Recipient: {recipient_name}")
+    print(f"Body: {body_text}")
+    print(f"Date: {date}")
+    print(f"Signature: {signature_line}")
+    print("="*60)
+    
+    confirm = input("\nCreate certificate? [Y/n]: ").strip().lower()
+    if confirm and confirm != 'y' and confirm != 'yes':
+        print("Cancelled.")
+        sys.exit(0)
+    
+    print()
+    generator.create_certificate(
+        output_file=output_file,
+        recipient_name=recipient_name,
+        title=title,
+        body_text=body_text,
+        date=date,
+        signature_line=signature_line,
+        theme=theme
+    )
+
+
 def main():
     """CLI interface for certificate generation."""
     import argparse
+    import sys
+    
+    # Check if running with no arguments (interactive mode)
+    if len(sys.argv) == 1:
+        interactive_mode()
+        return
     
     parser = argparse.ArgumentParser(
         description="Generate professional certificate slides for teacher aides"
@@ -261,10 +391,19 @@ def main():
         action="store_true",
         help="List available themes"
     )
+    parser.add_argument(
+        "-i", "--interactive",
+        action="store_true",
+        help="Run in interactive mode (asks for all options)"
+    )
     
     args = parser.parse_args()
     
     generator = CertificateGenerator()
+    
+    if args.interactive:
+        interactive_mode()
+        return
     
     if args.list_themes:
         print("\nAvailable Certificate Themes:")
