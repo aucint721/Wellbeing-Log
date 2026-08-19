@@ -29,6 +29,7 @@ class CertificateGenerator:
         body_text: str = "In recognition of outstanding dedication and service as a Teacher Aide",
         date: str = "[Date]",
         signature_line: str = "[Name]",
+        logo_path: str = None,
         theme: str = "royal_purple"
     ):
         """
