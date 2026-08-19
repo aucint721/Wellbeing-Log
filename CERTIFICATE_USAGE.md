@@ -69,6 +69,7 @@ python3 certificate_generator.py -o cert.pptx --theme forest_minimal
 | `-b, --body` | Body text | `In recognition of outstanding dedication...` |
 | `-d, --date` | Date of recognition | `[Date]` |
 | `-s, --signature` | Signature line name | `[Principal/Administrator Name]` |
+| `--signature-title` | Title below signature | `Principal` |
 | `--theme` | Theme name | `royal_purple` |
 | `--list-themes` | List all available themes | - |
 
