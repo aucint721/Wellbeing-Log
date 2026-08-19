@@ -4,6 +4,24 @@ A simple tool to create professional certificates for teacher aides and other sc
 
 ## Quick Examples
 
+### ✨ Interactive Mode (EASIEST - Recommended!)
+Just run without any arguments and it will guide you through all options:
+```bash
+python3 certificate_generator.py
+```
+
+You can also explicitly use the `-i` flag:
+```bash
+python3 certificate_generator.py -i
+```
+
+This will:
+- Show you all available themes organized by category
+- Let you pick a theme by number or name
+- Ask for recipient name, date, signature, etc.
+- Show you a preview before creating
+- Create the certificate with your choices
+
 ### Create a blank template (recommended for multiple recipients)
 ```bash
 python3 certificate_generator.py -o my_certificate.pptx
