@@ -217,6 +217,8 @@ class CertificateGenerator:
 def interactive_mode():
     """Interactive mode - ask user for all options."""
     import sys
+    from datetime import datetime
+    import re
     
     generator = CertificateGenerator()
     
@@ -225,10 +227,7 @@ def interactive_mode():
     print("="*60)
     print()
     
-    # Output filename
-    output_file = input("Output filename [teacher_aide_certificate.pptx]: ").strip()
-    if not output_file:
-        output_file = "teacher_aide_certificate.pptx"
+    # We'll generate the output filename later based on recipient name
     
     # Show theme options
     print("\n" + "-"*60)
