@@ -1,7 +1,20 @@
 #!/bin/bash
 # Certificate Generator - Show Available Themes and Help
 
-cd "$(dirname "$0")/.."
+# Find the Wellbeing-Log directory
+if [ -d "$HOME/Desktop/Wellbeing-Log" ]; then
+    cd "$HOME/Desktop/Wellbeing-Log"
+elif [ -d "$HOME/Documents/Wellbeing-Log" ]; then
+    cd "$HOME/Documents/Wellbeing-Log"
+elif [ -d "$(dirname "$0")/.." ]; then
+    cd "$(dirname "$0")/.."
+else
+    echo "❌ Error: Could not find Wellbeing-Log folder."
+    echo "Please make sure it's in ~/Desktop/Wellbeing-Log or ~/Documents/Wellbeing-Log"
+    echo ""
+    read -p "Press Enter to close..."
+    exit 1
+fi
 
 echo "============================================================"
 echo "       CERTIFICATE GENERATOR - HELP & THEMES"
