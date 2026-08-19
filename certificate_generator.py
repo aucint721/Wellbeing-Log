@@ -28,7 +28,7 @@ class CertificateGenerator:
         title: str = "Certificate of Recognition",
         body_text: str = "In recognition of outstanding dedication and service as a Teacher Aide",
         date: str = "[Date]",
-        signature_line: str = "[Principal/Administrator Name]",
+        signature_line: str = "[Name]",
         theme: str = "royal_purple"
     ):
         """
@@ -40,7 +40,7 @@ class CertificateGenerator:
             title: Certificate title
             body_text: Main recognition text
             date: Date of recognition
-            signature_line: Name for signature line
+            signature_line: Name for signature line (title "Principal" is automatically added below)
             theme: Theme from config.yaml (default: royal_purple for formal certificates)
         """
         
@@ -304,9 +304,9 @@ def interactive_mode():
     if not date:
         date = "[Date]"
     
-    signature_line = input("Signature name [[Principal/Administrator Name]]: ").strip()
+    signature_line = input("Principal name [[Name]]: ").strip()
     if not signature_line:
-        signature_line = "[Principal/Administrator Name]"
+        signature_line = "[Name]"
     
     # Confirmation
     print("\n" + "="*60)
@@ -318,7 +318,7 @@ def interactive_mode():
     print(f"Recipient: {recipient_name}")
     print(f"Body: {body_text}")
     print(f"Date: {date}")
-    print(f"Signature: {signature_line}")
+    print(f"Principal name: {signature_line}")
     print("="*60)
     
     confirm = input("\nCreate certificate? [Y/n]: ").strip().lower()
@@ -378,8 +378,8 @@ def main():
     )
     parser.add_argument(
         "-s", "--signature",
-        default="[Principal/Administrator Name]",
-        help="Name for signature line"
+        default="[Name]",
+        help="Principal name for signature line (title 'Principal' is automatically added)"
     )
     parser.add_argument(
         "--theme",
