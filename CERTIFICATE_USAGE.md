@@ -19,6 +19,7 @@ This will:
 - Show you all available themes organized by category
 - Let you pick a theme by number or name
 - Ask for recipient name, date, signature, etc.
+- Ask for your school logo file path (optional - automatically inserts it!)
 - Show you a preview before creating
 - Create the certificate with your choices
 
@@ -27,13 +28,21 @@ This will:
 python3 certificate_generator.py -o my_certificate.pptx
 ```
 
-### Create a certificate for a specific person
+### Create a personalized certificate
 ```bash
 python3 certificate_generator.py \
-  -o sarah_certificate.pptx \
   -n "Sarah Johnson" \
   -d "August 19, 2026" \
   -s "Dr. Michael Thompson"
+```
+
+### Create with your school logo
+```bash
+python3 certificate_generator.py \
+  -n "Sarah Johnson" \
+  -d "August 19, 2026" \
+  -s "Jane Smith" \
+  --logo ~/Desktop/school_logo.png
 ```
 
 ### Customize the text
@@ -71,18 +80,37 @@ python3 certificate_generator.py -o cert.pptx --theme forest_minimal
 | `-b, --body` | Body text | `In recognition of outstanding dedication...` |
 | `-d, --date` | Date of recognition | `[Date]` |
 | `-s, --signature` | Principal name (title "Principal" added automatically) | `[Name]` |
+| `--logo` | Path to logo image file (PNG, JPG, etc.) | None (shows placeholder) |
 | `--theme` | Theme name | `royal_purple` |
 | `--list-themes` | List all available themes | - |
 
 ## Adding Your School Logo
 
-1. **Open the certificate** in PowerPoint, Google Slides, or LibreOffice Impress
-2. **Click on the dashed box** that says "INSERT SCHOOL LOGO HERE"
-3. **Delete the placeholder box**
-4. **Insert your logo**: 
+### Option 1: Automatic (Recommended!)
+
+When running the interactive mode, you'll be asked for your logo file path:
+```
+Path to logo file (PNG/JPG) [leave blank for placeholder]: ~/Desktop/school_logo.png
+```
+
+Just type or paste the path to your logo file, and it will be automatically inserted!
+
+**Tips:**
+- Use `~/Desktop/school_logo.png` for files on your Desktop
+- Use tab-completion to help find the file path
+- Drag and drop the file into Terminal to get the full path
+- Supports PNG, JPG, and most image formats
+
+### Option 2: Manual (If you prefer)
+
+1. **Leave the logo path blank** when prompted (just press Enter)
+2. **Open the certificate** in PowerPoint, Google Slides, or LibreOffice Impress
+3. **Click on the dashed box** that says "INSERT SCHOOL LOGO HERE"
+4. **Delete the placeholder box**
+5. **Insert your logo**: 
    - PowerPoint: Insert → Pictures → This Device
    - Google Slides: Insert → Image → Upload from computer
-5. **Position and resize** your logo to fit nicely at the top
+6. **Position and resize** your logo to fit nicely at the top
 
 ## Tips
 
