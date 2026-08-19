@@ -5,6 +5,7 @@ Creates professional certificate slides with logo placeholders.
 Perfect for recognizing teacher aides and other school staff.
 """
 
+import os
 import yaml
 from pptx import Presentation
 from pptx.util import Inches, Pt
