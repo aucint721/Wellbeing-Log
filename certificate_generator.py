@@ -307,6 +307,27 @@ def interactive_mode():
     if not signature_line:
         signature_line = "[Name]"
     
+    # Generate unique filename based on recipient name
+    def sanitize_filename(name):
+        """Convert a name to a safe filename."""
+        # Remove special characters, keep only alphanumeric and spaces
+        safe = re.sub(r'[^\w\s-]', '', name)
+        # Replace spaces with underscores
+        safe = re.sub(r'\s+', '_', safe)
+        # Convert to lowercase
+        safe = safe.lower()
+        return safe
+    
+    # Create filename from recipient name
+    if recipient_name and recipient_name != "[Recipient Name]":
+        base_name = sanitize_filename(recipient_name)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"certificate_{base_name}_{timestamp}.pptx"
+    else:
+        # For blank templates, use timestamp only
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"certificate_template_{timestamp}.pptx"
+    
     # Confirmation
     print("\n" + "="*60)
     print("PREVIEW:")
