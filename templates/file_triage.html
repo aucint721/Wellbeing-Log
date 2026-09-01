@@ -134,6 +134,60 @@
         .dup-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
         .actions .span-2 { grid-column: 1 / -1; }
         .stat[data-jump] { cursor: pointer; }
+        .ql {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            background: rgba(15, 23, 42, 0.94);
+            color: #e2e8f0;
+            flex-direction: column;
+        }
+        .ql.show { display: flex; }
+        .ql-bar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 20px;
+            flex-wrap: wrap;
+        }
+        .ql-bar b { color: #fff; }
+        .ql-stage {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px 20px;
+            overflow: auto;
+        }
+        .ql-stage img, .ql-stage video {
+            max-width: 96vw;
+            max-height: 82vh;
+            border-radius: 8px;
+            background: #000;
+        }
+        .ql-stage iframe {
+            width: 96vw;
+            height: 82vh;
+            border: 0;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .ql-stage pre, .ql-note {
+            width: min(900px, 94vw);
+            max-height: 82vh;
+            overflow: auto;
+            white-space: pre-wrap;
+            background: #020617;
+            padding: 18px;
+            border-radius: 12px;
+            line-height: 1.45;
+        }
+        .ql-hint { opacity: 0.8; font-size: 0.85em; }
+        .preview { cursor: zoom-in; }
+        .preview img { cursor: zoom-in; }
         @media (max-width: 980px) {
             .layout, .row { grid-template-columns: 1fr; }
         }
@@ -263,23 +317,39 @@
                     <button type="button" data-d="keep_local">2 Keep local</button>
                     <button type="button" data-d="archive">3 Archive</button>
                     <button type="button" data-d="delete" class="btn-danger">4 Delete</button>
-                    <button type="button" data-d="skip">Space Skip</button>
+                    <button type="button" data-d="skip">S Skip</button>
                     <button type="button" data-d="none" class="btn-ghost">Clear</button>
+                    <button type="button" id="quickLookBtn" class="btn-ghost span-2">Space Quick Look</button>
                     <button type="button" id="keepDupBtn" class="btn-primary span-2 hidden">Keep this, trash copies</button>
                 </div>
                 <div class="keys">
-                    Keys: 1–4 decide, Space skip, J/K next/prev.<br>
+                    Keys: Space Quick Look (Esc closes) · 1–4 decide · S skip · J/K next/prev.<br>
                     Delete moves into Triage Trash on this Mac.
                 </div>
             </div>
         </div>
     </div>
 </div>
+<div class="ql" id="ql">
+    <div class="ql-bar">
+        <div>
+            <b id="qlTitle">Quick Look</b>
+            <div class="ql-hint" id="qlMeta"></div>
+        </div>
+        <div>
+            <span class="ql-hint">Space or Esc closes · J/K next · 1–4 decide · S skip</span>
+            <button type="button" class="btn-ghost" id="qlClose">Close</button>
+        </div>
+    </div>
+    <div class="ql-stage" id="qlStage"></div>
+</div>
 <script>
 const $ = (id) => document.getElementById(id);
 let currentId = null;
+let currentRec = null;
 let files = [];
 let pollTimer = null;
+let qlOpen = false;
 
 function destPayload() {
     return {
@@ -368,6 +438,10 @@ async function selectFile(id) {
     let preview = "";
     if (rec.preview?.kind === "image") {
         preview = `<img alt="" src="/api/files/${id}/preview">`;
+    } else if (rec.preview?.kind === "pdf") {
+        preview = `<div class="preview">${escapeHtml(rec.preview.text || rec.preview.note || "PDF — press Space for Quick Look")}</div>`;
+    } else if (rec.preview?.kind === "video" || rec.preview?.kind === "audio") {
+        preview = `<div class="preview">${escapeHtml(rec.preview.note || "Press Space for Quick Look")}</div>`;
     } else if (rec.preview?.text) {
         preview = `<div class="preview">${escapeHtml(rec.preview.text)}</div>`;
     } else {
@@ -377,7 +451,9 @@ async function selectFile(id) {
         <p><b>${escapeHtml(rec.name)}</b></p>
         <p class="muted">${escapeHtml(rec.path)}<br>${rec.size_label} · ${rec.type_group} · ${rec.mtime_label}</p>
         ${preview}
+        <p class="muted" style="margin-top:8px">Space = Quick Look (Finder-style). Double-click a file in the queue too.</p>
     `;
+    currentRec = rec;
     const keepBtn = $("keepDupBtn");
     if (rec.dup_group) {
         keepBtn.classList.remove("hidden");
@@ -388,6 +464,59 @@ async function selectFile(id) {
         delete keepBtn.dataset.keep;
         delete keepBtn.dataset.id;
     }
+    if (qlOpen) renderQuickLook(rec);
+}
+
+function previewUrl(id) {
+    return "/api/files/" + id + "/preview";
+}
+
+function renderQuickLook(rec) {
+    if (!rec) return;
+    $("qlTitle").textContent = rec.name || "Quick Look";
+    $("qlMeta").textContent = `${rec.size_label || ""} · ${rec.type_group || ""} · ${rec.path || ""}`;
+    const kind = rec.preview?.kind || rec.type_group;
+    const url = previewUrl(rec.id);
+    let body = "";
+    if (kind === "image") {
+        body = `<img alt="" src="${url}">`;
+    } else if (kind === "pdf") {
+        body = `<iframe title="PDF preview" src="${url}"></iframe>`;
+    } else if (kind === "video") {
+        body = `<video src="${url}" controls autoplay></video>`;
+    } else if (kind === "audio") {
+        body = `<audio src="${url}" controls autoplay></audio>`;
+    } else if (rec.preview?.text) {
+        body = `<pre>${escapeHtml(rec.preview.text)}</pre>`;
+    } else {
+        body = `<div class="ql-note">${escapeHtml(rec.preview?.note || "No preview for this type.")}<br><br>${escapeHtml(rec.path || "")}</div>`;
+    }
+    $("qlStage").innerHTML = body;
+}
+
+function openQuickLook() {
+    if (!currentId) return;
+    qlOpen = true;
+    $("ql").classList.add("show");
+    if (currentRec && currentRec.id === currentId) renderQuickLook(currentRec);
+    else selectFile(currentId);
+}
+
+function closeQuickLook() {
+    qlOpen = false;
+    $("ql").classList.remove("show");
+    $("qlStage").innerHTML = "";
+}
+
+function toggleQuickLook() {
+    if (qlOpen) closeQuickLook();
+    else openQuickLook();
+}
+
+function stepFile(delta) {
+    const idx = files.findIndex(f => f.id === currentId);
+    const next = files[idx + delta];
+    if (next) selectFile(next.id);
 }
 
 function escapeHtml(s) {
@@ -464,6 +593,19 @@ $("files").addEventListener("click", (e) => {
     const row = e.target.closest(".file");
     if (row) selectFile(row.dataset.id);
 });
+$("files").addEventListener("dblclick", (e) => {
+    const row = e.target.closest(".file");
+    if (!row) return;
+    selectFile(row.dataset.id).then(() => openQuickLook());
+});
+$("detailBody").addEventListener("click", () => {
+    if (currentId) openQuickLook();
+});
+$("quickLookBtn").onclick = () => openQuickLook();
+$("qlClose").onclick = () => closeQuickLook();
+$("ql").addEventListener("click", (e) => {
+    if (e.target.id === "ql" || e.target.id === "qlStage") closeQuickLook();
+});
 $("folders").addEventListener("click", (e) => {
     const row = e.target.closest("[data-folder]");
     if (!row) return;
@@ -525,15 +667,11 @@ document.addEventListener("keydown", (e) => {
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
     const map = {Digit1:"critical", Digit2:"keep_local", Digit3:"archive", Digit4:"delete"};
     if (map[e.code]) { e.preventDefault(); decide(map[e.code]); }
-    if (e.code === "Space") { e.preventDefault(); decide("skip"); }
-    if (e.key === "j" || e.key === "J") {
-        const idx = files.findIndex(f => f.id === currentId);
-        if (files[idx+1]) selectFile(files[idx+1].id);
-    }
-    if (e.key === "k" || e.key === "K") {
-        const idx = files.findIndex(f => f.id === currentId);
-        if (files[idx-1]) selectFile(files[idx-1].id);
-    }
+    if (e.code === "Space") { e.preventDefault(); toggleQuickLook(); }
+    if (e.code === "Escape") { e.preventDefault(); closeQuickLook(); }
+    if (e.key === "s" || e.key === "S") { e.preventDefault(); decide("skip"); }
+    if (e.key === "j" || e.key === "J") { e.preventDefault(); stepFile(1); }
+    if (e.key === "k" || e.key === "K") { e.preventDefault(); stepFile(-1); }
 });
 
 bootstrap();

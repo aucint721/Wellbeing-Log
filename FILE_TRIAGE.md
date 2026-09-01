@@ -77,4 +77,6 @@ python file_triage.py apply outputs/file_triage/<session>.json --execute
 
 ## Keys in the UI
 
-`1` Current · `2` Keep local · `3` Archive · `4` Delete · `Space` Skip · `J` / `K` next / previous
+`1` Current · `2` Keep local · `3` Archive · `4` Delete · `Space` Quick Look (Esc closes) · `S` Skip · `J` / `K` next / previous
+
+Double-click a file in the queue for the same Quick Look overlay (images, PDFs, video, text).
