@@ -206,6 +206,25 @@ fi
 exec python3 desktop_app.py
 "
 
+# --- 5. File Triage ---
+write_cmd "5. Open File Triage.command" "#!/bin/zsh
+set -e
+ROOT=\"$ROOT\"
+cd \"\$ROOT\"
+if [ -f \"venv/bin/activate\" ]; then
+  source \"venv/bin/activate\"
+elif [ -f \".venv/bin/activate\" ]; then
+  source \".venv/bin/activate\"
+else
+  echo \"Setup is not done yet.\"
+  echo \"Double-click: 1. Setup Presentation Generator\"
+  echo \"\"
+  read -k 1 \"?Press any key to close...\"
+  exit 1
+fi
+exec python3 desktop_file_triage.py
+"
+
 # Also keep the older single-name launcher for convenience
 write_cmd "Presentation Generator.command" "#!/bin/zsh
 set -e
@@ -233,6 +252,7 @@ echo "Use in order the first time:"
 echo "  1. Setup Presentation Generator"
 echo "  2. Set Claude API Key"
 echo "  4. Open Presentation Generator"
+echo "  5. Open File Triage   (sort / delete / store documents)"
 echo ""
 echo "Later: 3. Update Presentation Generator"
 echo "If macOS blocks a shortcut: right-click → Open → Open."

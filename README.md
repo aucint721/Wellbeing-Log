@@ -133,9 +133,15 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ├── presentation_generator.py    # Core designer engine
 ├── cli.py                       # Command-line interface
 ├── web_ui.py                    # Flask web interface
-├── templates/index.html         # Web UI
+├── file_triage.py               # Local file inventory + decide/apply engine
+├── file_triage_ui.py            # File Triage web UI (localhost:5051)
+├── desktop_file_triage.py       # Native window for File Triage
+├── FILE_TRIAGE.md               # Four-bucket sort policy
+├── templates/index.html         # Presentation Web UI
+├── templates/file_triage.html   # File Triage UI
 ├── theme_assets/                # Photo theme backgrounds (Unsplash)
 ├── scripts/fetch_theme_photos.py
+├── scripts/make_triage_demo.py  # Sample messy folder for triage
 ├── demo_designer_claude.py      # Standalone designer demo
 ├── demo_enhanced_claude.py      # Standalone enhanced demo
 ├── requirements.txt
@@ -164,6 +170,19 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ### Model not found (Ollama)
 Confirm the name matches `ollama list` and `config.yaml`, e.g. `hermes-auditor:latest`.
+
+## 📂 File Triage (too many documents)
+
+If iCloud Drive is full of documents you have not sorted yet, **do not buy more iCloud** and **do not buy another management app.** You already have Duplicate Detective, Photo Sweeper, Calibre, and Hazel — they each cover one lane. The 2 TB iMac is the store for the ~200 GB.
+
+Use the local **File Triage** tool: copy Drive onto the SSD, turn iCloud Drive off, then scan, mark **Current / Keep local / Archive / Delete**, and Apply. Deletes go to a recoverable Triage Trash folder.
+
+```bash
+python file_triage_ui.py          # http://127.0.0.1:5051
+python desktop_file_triage.py     # native window
+```
+
+See `FILE_TRIAGE.md` for the four-bucket policy, iCloud Drive path, and keyboard shortcuts.
 
 ## 🎉 Get Started
 
