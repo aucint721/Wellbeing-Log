@@ -79,4 +79,4 @@ python file_triage.py apply outputs/file_triage/<session>.json --execute
 
 `1` Current · `2` Keep local · `3` Archive · `4` Delete · **hover** the queue to preview · `S` Skip · `J` / `K` next / previous · `Space` optional full-screen zoom (Esc closes)
 
-Run the mouse down the file list — a preview pane opens on the right so you do not have to press Space for every file.
+`1` Current · `2` Keep local · `3` Archive · `4` Delete · hover the queue to preview · drag the preview window · **X** or **Esc** closes it (untick **Hover preview** to keep it closed) · `S` Skip · `J` / `K` next / previous · `Space` optional full-screen zoom

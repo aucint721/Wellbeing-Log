@@ -191,29 +191,43 @@
         .peek {
             display: none;
             position: fixed;
-            top: 64px;
-            left: max(280px, 34%);
-            right: 12px;
-            width: auto;
-            height: min(78vh, 840px);
+            right: 16px;
+            bottom: 16px;
+            top: auto;
+            left: auto;
+            width: min(440px, 92vw);
+            height: min(520px, 72vh);
             z-index: 90;
             background: #fff7ed;
             color: #0f172a;
             border: 3px solid #ea580c;
             border-radius: 16px;
             box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-            pointer-events: none;
+            pointer-events: auto;
             overflow: hidden;
             flex-direction: column;
         }
         .peek.show { display: flex; }
         .peek-bar {
-            padding: 12px 14px 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 10px 8px 14px;
             font-size: 0.92em;
             background: #ffedd5;
+            cursor: move;
+            user-select: none;
         }
-        .peek-bar b { color: #9a3412; display: block; }
-        .peek-bar span { color: #7c2d12; font-size: 0.82em; }
+        .peek-titles { flex: 1; min-width: 0; }
+        .peek-titles b {
+            color: #9a3412;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .peek-titles span { color: #7c2d12; font-size: 0.82em; }
+        .peek-bar button { cursor: pointer; flex-shrink: 0; }
         .peek-stage {
             flex: 1;
             min-height: 0;
@@ -226,19 +240,19 @@
         }
         .peek-stage img, .peek-stage video {
             max-width: 100%;
-            max-height: 68vh;
+            max-height: 100%;
             border-radius: 8px;
         }
         .peek-stage iframe {
             width: 100%;
-            height: 66vh;
+            height: 100%;
             border: 0;
             border-radius: 8px;
             background: #fff;
         }
         .peek-stage pre, .peek-note {
             width: 100%;
-            height: 66vh;
+            height: 100%;
             overflow: auto;
             white-space: pre-wrap;
             background: #020617;
@@ -363,6 +377,7 @@
             <div class="card">
                 <div class="bar">
                     <h2 style="margin:0">Queue</h2>
+                    <label class="muted"><input type="checkbox" id="peekHover" checked> Hover preview</label>
                     <span class="muted" id="queueMeta"></span>
                 </div>
                 <div class="file-list" id="files"></div>
@@ -383,7 +398,7 @@
                     <button type="button" id="keepDupBtn" class="btn-primary span-2 hidden">Keep this, trash copies</button>
                 </div>
                 <div class="keys">
-                    Keys: hover queue to preview · 1–4 decide · S skip · J/K next/prev.<br>
+                    Keys: hover to preview · drag the preview · Esc or X closes it · 1–4 decide · S skip.<br>
                     Space still zooms full screen. Delete goes to Triage Trash.
                 </div>
             </div>
@@ -404,9 +419,12 @@
     <div class="ql-stage" id="qlStage"></div>
 </div>
 <div class="peek" id="peek">
-    <div class="peek-bar">
-        <b id="peekTitle">Hover a file to preview</b>
-        <span id="peekMeta"></span>
+    <div class="peek-bar" id="peekBar">
+        <div class="peek-titles">
+            <b id="peekTitle">Hover a file to preview</b>
+            <span id="peekMeta">Drag this bar to move · X closes</span>
+        </div>
+        <button type="button" class="btn-ghost" id="peekClose">X Close</button>
     </div>
     <div class="peek-stage" id="peekStage"></div>
 </div>
@@ -420,6 +438,7 @@ let qlOpen = false;
 let hoverTimer = null;
 let hoverToken = 0;
 let peekId = null;
+let peekEnabled = true;
 
 function destPayload() {
     return {
@@ -523,7 +542,7 @@ async function selectFile(id, token) {
         <p><b>${escapeHtml(rec.name)}</b></p>
         <p class="muted">${escapeHtml(rec.path)}<br>${rec.size_label} · ${rec.type_group} · ${rec.mtime_label}</p>
         ${preview}
-        <p class="muted" style="margin-top:8px">Hover the list to preview. Space zooms full screen if you want it bigger.</p>
+        <p class="muted" style="margin-top:8px">Hover the list to preview. Drag the preview window, or X / Esc to close it.</p>
     `;
     currentRec = rec;
     renderPeek(rec);
@@ -556,13 +575,57 @@ function previewMedia(rec, {autoplay} = {autoplay: false}) {
 }
 
 function renderPeek(rec) {
-    if (!rec) return;
+    if (!rec || !peekEnabled) return;
     $("peek").classList.add("show");
     $("peekTitle").textContent = rec.name || "Preview";
-    $("peekMeta").textContent = `${rec.size_label || ""} · ${rec.type_group || ""}`;
+    $("peekMeta").textContent = `${rec.size_label || ""} · ${rec.type_group || ""} · drag to move`;
     if (peekId === rec.id) return;
     peekId = rec.id;
     $("peekStage").innerHTML = previewMedia(rec, {autoplay: false});
+}
+
+function closePeek() {
+    peekEnabled = false;
+    peekId = null;
+    $("peek").classList.remove("show");
+    $("peekStage").innerHTML = "";
+    if ($("peekHover")) $("peekHover").checked = false;
+}
+
+function setPeekEnabled(on) {
+    peekEnabled = !!on;
+    if ($("peekHover")) $("peekHover").checked = peekEnabled;
+    if (peekEnabled && currentRec) renderPeek(currentRec);
+    else if (!peekEnabled) closePeek();
+}
+
+function initPeekDrag() {
+    const el = $("peek");
+    const bar = $("peekBar");
+    let dragging = false;
+    let ox = 0;
+    let oy = 0;
+    bar.addEventListener("mousedown", (e) => {
+        if (e.target.closest("button")) return;
+        const r = el.getBoundingClientRect();
+        dragging = true;
+        ox = e.clientX - r.left;
+        oy = e.clientY - r.top;
+        e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        const r = el.getBoundingClientRect();
+        let x = e.clientX - ox;
+        let y = e.clientY - oy;
+        x = Math.max(8, Math.min(x, window.innerWidth - r.width - 8));
+        y = Math.max(8, Math.min(y, window.innerHeight - 40));
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.right = "auto";
+        el.style.bottom = "auto";
+    });
+    window.addEventListener("mouseup", () => { dragging = false; });
 }
 
 function renderQuickLook(rec) {
@@ -575,7 +638,7 @@ function renderQuickLook(rec) {
 function hoverFile(id) {
     if (!id) return;
     if (id === currentId && currentRec && currentRec.id === id) {
-        renderPeek(currentRec);
+        if (peekEnabled) renderPeek(currentRec);
         return;
     }
     clearTimeout(hoverTimer);
@@ -698,6 +761,9 @@ $("detailBody").addEventListener("click", () => {
 });
 $("quickLookBtn").onclick = () => openQuickLook();
 $("qlClose").onclick = () => closeQuickLook();
+$("peekClose").onclick = () => closePeek();
+$("peekHover").addEventListener("change", (e) => setPeekEnabled(e.target.checked));
+initPeekDrag();
 $("ql").addEventListener("click", (e) => {
     if (e.target.id === "ql" || e.target.id === "qlStage") closeQuickLook();
 });
@@ -763,7 +829,11 @@ document.addEventListener("keydown", (e) => {
     const map = {Digit1:"critical", Digit2:"keep_local", Digit3:"archive", Digit4:"delete"};
     if (map[e.code]) { e.preventDefault(); decide(map[e.code]); }
     if (e.code === "Space") { e.preventDefault(); toggleQuickLook(); }
-    if (e.code === "Escape") { e.preventDefault(); closeQuickLook(); }
+    if (e.code === "Escape") {
+        e.preventDefault();
+        if (qlOpen) closeQuickLook();
+        else closePeek();
+    }
     if (e.key === "s" || e.key === "S") { e.preventDefault(); decide("skip"); }
     if (e.key === "j" || e.key === "J") { e.preventDefault(); stepFile(1); }
     if (e.key === "k" || e.key === "K") { e.preventDefault(); stepFile(-1); }
