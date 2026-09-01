@@ -38,6 +38,14 @@ You should see (exact names used by this project):
 
 If a name differs on your machine, update the matching `model_id` in `config.yaml`.
 
+### File Triage (sort a messy folder)
+
+```bash
+python file_triage_ui.py
+```
+
+Open **http://127.0.0.1:5051**. See `FILE_TRIAGE.md`.
+
 ## Step 3: Choose Your Interface
 
 ### Option A: Web Interface (Easiest!)
