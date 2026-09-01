@@ -825,19 +825,20 @@ $("applyBtn").onclick = async () => {
 };
 
 document.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") {
+        e.preventDefault();
+        if (qlOpen) closeQuickLook();
+        else if ($("peek").classList.contains("show")) closePeek();
+        return;
+    }
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
     const map = {Digit1:"critical", Digit2:"keep_local", Digit3:"archive", Digit4:"delete"};
     if (map[e.code]) { e.preventDefault(); decide(map[e.code]); }
     if (e.code === "Space") { e.preventDefault(); toggleQuickLook(); }
-    if (e.code === "Escape") {
-        e.preventDefault();
-        if (qlOpen) closeQuickLook();
-        else closePeek();
-    }
     if (e.key === "s" || e.key === "S") { e.preventDefault(); decide("skip"); }
     if (e.key === "j" || e.key === "J") { e.preventDefault(); stepFile(1); }
     if (e.key === "k" || e.key === "K") { e.preventDefault(); stepFile(-1); }
-});
+}, true);
 
 bootstrap();
 </script>
