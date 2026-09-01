@@ -191,14 +191,15 @@
         .peek {
             display: none;
             position: fixed;
-            top: 72px;
-            left: max(300px, 36%);
+            top: 64px;
+            left: max(280px, 34%);
             right: 12px;
             width: auto;
             height: min(78vh, 840px);
-            z-index: 40;
-            background: #0f172a;
-            color: #e2e8f0;
+            z-index: 90;
+            background: #fff7ed;
+            color: #0f172a;
+            border: 3px solid #ea580c;
             border-radius: 16px;
             box-shadow: 0 24px 60px rgba(0,0,0,0.45);
             pointer-events: none;
@@ -209,9 +210,10 @@
         .peek-bar {
             padding: 12px 14px 8px;
             font-size: 0.92em;
+            background: #ffedd5;
         }
-        .peek-bar b { color: #fff; display: block; }
-        .peek-bar span { opacity: 0.75; font-size: 0.82em; }
+        .peek-bar b { color: #9a3412; display: block; }
+        .peek-bar span { color: #7c2d12; font-size: 0.82em; }
         .peek-stage {
             flex: 1;
             min-height: 0;
@@ -220,6 +222,7 @@
             justify-content: center;
             padding: 0 12px 12px;
             overflow: hidden;
+            background: #fff;
         }
         .peek-stage img, .peek-stage video {
             max-width: 100%;
@@ -579,7 +582,7 @@ function hoverFile(id) {
     hoverTimer = setTimeout(() => {
         const token = ++hoverToken;
         selectFile(id, token);
-    }, 140);
+    }, 80);
 }
 
 function openQuickLook() {
