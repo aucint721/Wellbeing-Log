@@ -188,8 +188,65 @@
         .ql-hint { opacity: 0.8; font-size: 0.85em; }
         .preview { cursor: zoom-in; }
         .preview img { cursor: zoom-in; }
+        .peek {
+            display: none;
+            position: fixed;
+            top: 72px;
+            left: max(300px, 36%);
+            right: 12px;
+            width: auto;
+            height: min(78vh, 840px);
+            z-index: 40;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+            pointer-events: none;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        .peek.show { display: flex; }
+        .peek-bar {
+            padding: 12px 14px 8px;
+            font-size: 0.92em;
+        }
+        .peek-bar b { color: #fff; display: block; }
+        .peek-bar span { opacity: 0.75; font-size: 0.82em; }
+        .peek-stage {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px 12px;
+            overflow: hidden;
+        }
+        .peek-stage img, .peek-stage video {
+            max-width: 100%;
+            max-height: 68vh;
+            border-radius: 8px;
+        }
+        .peek-stage iframe {
+            width: 100%;
+            height: 66vh;
+            border: 0;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .peek-stage pre, .peek-note {
+            width: 100%;
+            height: 66vh;
+            overflow: auto;
+            white-space: pre-wrap;
+            background: #020617;
+            padding: 14px;
+            border-radius: 8px;
+            line-height: 1.4;
+            font-size: 0.85em;
+        }
         @media (max-width: 980px) {
             .layout, .row { grid-template-columns: 1fr; }
+            .peek { width: 94vw; left: 3vw; right: 3vw; }
         }
     </style>
 </head>
@@ -319,12 +376,12 @@
                     <button type="button" data-d="delete" class="btn-danger">4 Delete</button>
                     <button type="button" data-d="skip">S Skip</button>
                     <button type="button" data-d="none" class="btn-ghost">Clear</button>
-                    <button type="button" id="quickLookBtn" class="btn-ghost span-2">Space Quick Look</button>
+                    <button type="button" id="quickLookBtn" class="btn-ghost span-2">Zoom preview</button>
                     <button type="button" id="keepDupBtn" class="btn-primary span-2 hidden">Keep this, trash copies</button>
                 </div>
                 <div class="keys">
-                    Keys: Space Quick Look (Esc closes) · 1–4 decide · S skip · J/K next/prev.<br>
-                    Delete moves into Triage Trash on this Mac.
+                    Keys: hover queue to preview · 1–4 decide · S skip · J/K next/prev.<br>
+                    Space still zooms full screen. Delete goes to Triage Trash.
                 </div>
             </div>
         </div>
@@ -343,6 +400,13 @@
     </div>
     <div class="ql-stage" id="qlStage"></div>
 </div>
+<div class="peek" id="peek">
+    <div class="peek-bar">
+        <b id="peekTitle">Hover a file to preview</b>
+        <span id="peekMeta"></span>
+    </div>
+    <div class="peek-stage" id="peekStage"></div>
+</div>
 <script>
 const $ = (id) => document.getElementById(id);
 let currentId = null;
@@ -350,6 +414,9 @@ let currentRec = null;
 let files = [];
 let pollTimer = null;
 let qlOpen = false;
+let hoverTimer = null;
+let hoverToken = 0;
+let peekId = null;
 
 function destPayload() {
     return {
@@ -431,10 +498,12 @@ async function loadFiles() {
     if (files.length && !files.find(f => f.id === currentId)) selectFile(files[0].id);
 }
 
-async function selectFile(id) {
+async function selectFile(id, token) {
     currentId = id;
     document.querySelectorAll(".file").forEach(el => el.classList.toggle("active", el.dataset.id === id));
     const rec = await fetch("/api/files/" + id).then(r => r.json());
+    if (token != null && token !== hoverToken) return rec;
+    if (rec.error) return rec;
     let preview = "";
     if (rec.preview?.kind === "image") {
         preview = `<img alt="" src="/api/files/${id}/preview">`;
@@ -451,9 +520,10 @@ async function selectFile(id) {
         <p><b>${escapeHtml(rec.name)}</b></p>
         <p class="muted">${escapeHtml(rec.path)}<br>${rec.size_label} · ${rec.type_group} · ${rec.mtime_label}</p>
         ${preview}
-        <p class="muted" style="margin-top:8px">Space = Quick Look (Finder-style). Double-click a file in the queue too.</p>
+        <p class="muted" style="margin-top:8px">Hover the list to preview. Space zooms full screen if you want it bigger.</p>
     `;
     currentRec = rec;
+    renderPeek(rec);
     const keepBtn = $("keepDupBtn");
     if (rec.dup_group) {
         keepBtn.classList.remove("hidden");
@@ -471,27 +541,45 @@ function previewUrl(id) {
     return "/api/files/" + id + "/preview";
 }
 
+function previewMedia(rec, {autoplay} = {autoplay: false}) {
+    const kind = rec.preview?.kind || rec.type_group;
+    const url = previewUrl(rec.id);
+    if (kind === "image") return `<img alt="" src="${url}">`;
+    if (kind === "pdf") return `<iframe title="PDF preview" src="${url}"></iframe>`;
+    if (kind === "video") return `<video src="${url}" controls ${autoplay ? "autoplay" : ""}></video>`;
+    if (kind === "audio") return `<audio src="${url}" controls ${autoplay ? "autoplay" : ""}></audio>`;
+    if (rec.preview?.text) return `<pre>${escapeHtml(rec.preview.text)}</pre>`;
+    return `<div class="peek-note">${escapeHtml(rec.preview?.note || "No preview for this type.")}<br><br>${escapeHtml(rec.path || "")}</div>`;
+}
+
+function renderPeek(rec) {
+    if (!rec) return;
+    $("peek").classList.add("show");
+    $("peekTitle").textContent = rec.name || "Preview";
+    $("peekMeta").textContent = `${rec.size_label || ""} · ${rec.type_group || ""}`;
+    if (peekId === rec.id) return;
+    peekId = rec.id;
+    $("peekStage").innerHTML = previewMedia(rec, {autoplay: false});
+}
+
 function renderQuickLook(rec) {
     if (!rec) return;
     $("qlTitle").textContent = rec.name || "Quick Look";
     $("qlMeta").textContent = `${rec.size_label || ""} · ${rec.type_group || ""} · ${rec.path || ""}`;
-    const kind = rec.preview?.kind || rec.type_group;
-    const url = previewUrl(rec.id);
-    let body = "";
-    if (kind === "image") {
-        body = `<img alt="" src="${url}">`;
-    } else if (kind === "pdf") {
-        body = `<iframe title="PDF preview" src="${url}"></iframe>`;
-    } else if (kind === "video") {
-        body = `<video src="${url}" controls autoplay></video>`;
-    } else if (kind === "audio") {
-        body = `<audio src="${url}" controls autoplay></audio>`;
-    } else if (rec.preview?.text) {
-        body = `<pre>${escapeHtml(rec.preview.text)}</pre>`;
-    } else {
-        body = `<div class="ql-note">${escapeHtml(rec.preview?.note || "No preview for this type.")}<br><br>${escapeHtml(rec.path || "")}</div>`;
+    $("qlStage").innerHTML = previewMedia(rec, {autoplay: true});
+}
+
+function hoverFile(id) {
+    if (!id) return;
+    if (id === currentId && currentRec && currentRec.id === id) {
+        renderPeek(currentRec);
+        return;
     }
-    $("qlStage").innerHTML = body;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+        const token = ++hoverToken;
+        selectFile(id, token);
+    }, 140);
 }
 
 function openQuickLook() {
@@ -592,6 +680,10 @@ $("scanBtn").onclick = async () => {
 $("files").addEventListener("click", (e) => {
     const row = e.target.closest(".file");
     if (row) selectFile(row.dataset.id);
+});
+$("files").addEventListener("mouseover", (e) => {
+    const row = e.target.closest(".file");
+    if (row) hoverFile(row.dataset.id);
 });
 $("files").addEventListener("dblclick", (e) => {
     const row = e.target.closest(".file");
