@@ -8,9 +8,9 @@ files, finds likely duplicates, and applies keep / archive / delete moves
 only after you confirm.
 
 Decisions:
-  critical   — keep in the cloud (move into the Critical destination)
-  keep_local — keep on this computer, out of iCloud
-  archive    — copy-then-remove from the scan folder into Archive
+  critical   — small Current set on this Mac (not more iCloud)
+  keep_local — the bulk of what you keep on the internal SSD
+  archive    — old, might need someday (still on this Mac)
   delete     — move into a recoverable Triage Trash folder
   skip       — reviewed, leave in place for now
 """
@@ -79,6 +79,7 @@ TYPE_GROUPS = {
     "video": {".mov", ".mp4", ".m4v", ".avi", ".mkv", ".wmv", ".webm"},
     "audio": {".mp3", ".m4a", ".wav", ".aac", ".flac", ".aiff"},
     "archive": {".zip", ".dmg", ".pkg", ".rar", ".7z", ".tar", ".gz", ".bz2"},
+    "ebook": {".epub", ".mobi", ".azw", ".azw3", ".fb2"},
     "text": {".txt", ".md", ".rtf", ".csv", ".json", ".yaml", ".yml", ".log"},
 }
 
@@ -135,14 +136,14 @@ def format_bytes(n: int) -> str:
 
 
 def default_destinations(home: Optional[Path] = None) -> dict[str, str]:
+    """Local-first destinations. Nothing here points at iCloud on purpose."""
     home = home or Path.home()
-    icloud = home / "Library" / "Mobile Documents" / "com~apple~CloudDocs"
-    critical = icloud / "Critical" if icloud.exists() else home / "Critical"
+    keep = home / "Documents-Local"
     return {
-        "critical": str(critical),
-        "keep_local": str(home / "Documents-Local"),
+        "critical": str(home / "Current"),
+        "keep_local": str(keep),
         "archive": str(home / "Archive"),
-        "delete": str(home / "Documents-Local" / "_TriageTrash"),
+        "delete": str(keep / "_TriageTrash"),
     }
 
 

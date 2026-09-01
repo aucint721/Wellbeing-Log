@@ -77,6 +77,8 @@ def make_demo(root: Path) -> Path:
 
     _write(videos / "family-clip.mp4", b"ftypmp42" + b"V" * (3 * 1024 * 1024), age_days=1500)
 
+    _write(root / "Ebooks" / "old-novel.epub", b"PK\x03\x04EPUB" + b"E" * 2048, age_days=400)
+
     payload = b"IDENTICAL-DOCUMENT-BODY-" + b"D" * 4096
     _write(dupes / "report-final.txt", payload, age_days=100)
     _write(dupes / "report-final-copy.txt", payload, age_days=90)

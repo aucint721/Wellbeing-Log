@@ -141,33 +141,37 @@
 <div class="wrap">
     <div class="header">
         <h1>File Triage</h1>
-        <p>Gather the pile, look at the big stuff first, then decide: keep, archive, or delete.</p>
+        <p>Park the ~200 GB on the 2 TB iMac. Do not buy more iCloud. Decide Current, Keep, Archive, or Delete.</p>
         <div class="pills">
-            <span class="pill">Stays on this computer</span>
-            <span class="pill">No management-app subscription</span>
-            <span class="pill">Delete goes to Triage Trash</span>
+            <span class="pill">Stays on this Mac</span>
+            <span class="pill">No extra iCloud</span>
+            <span class="pill">Hazel / Calibre / Photo Sweeper keep their own lanes</span>
         </div>
     </div>
 
     <div class="card" id="setup">
-        <h2>1. Point at the folder that is overflowing</h2>
-        <p class="muted">On a Mac, iCloud Drive is usually <code>Library/Mobile Documents/com~apple~CloudDocs</code>. Start with the biggest dump — not the whole home folder.</p>
+        <h2>1. Point at the local copy (not iCloud)</h2>
+        <p class="muted">Copy iCloud Drive onto the 2 TB SSD first (for example <code>~/From-iCloud-Drive</code>), then scan that folder. Destinations below are local on purpose.</p>
         <div class="roots" id="roots"></div>
         <label for="folder">Folder to scan</label>
-        <input id="folder" type="text" placeholder="/Users/you/Library/Mobile Documents/com~apple~CloudDocs">
+        <input id="folder" type="text" placeholder="/Users/you/From-iCloud-Drive">
         <div class="row" style="margin-top:12px">
             <div>
-                <label>Critical (keep in iCloud)</label>
+                <label>Current (small, this Mac — not more iCloud)</label>
                 <input id="dest-critical" type="text">
-                <label>Keep local (out of iCloud)</label>
+                <label>Keep local (bulk of the 200 GB)</label>
                 <input id="dest-keep_local" type="text">
             </div>
             <div>
-                <label>Archive (external / long-term)</label>
+                <label>Archive (old, still on this SSD)</label>
                 <input id="dest-archive" type="text">
                 <label>Triage Trash (recoverable deletes)</label>
                 <input id="dest-delete" type="text">
             </div>
+        </div>
+        <div class="muted" style="margin-top:12px">
+            After this pile is sorted: <b>Photo Sweeper</b> for photos, <b>Calibre</b> for ebooks,
+            <b>Duplicate Detective</b> on one leftover folder, <b>Hazel</b> only for new Downloads going forward.
         </div>
         <div style="margin-top:16px" class="bar">
             <button class="btn-primary" id="scanBtn" type="button">Scan folder</button>
@@ -186,6 +190,7 @@
                 </div>
             </div>
             <p class="muted" id="rootLabel"></p>
+            <div id="applyMsg"></div>
             <div class="stats" id="stats"></div>
         </div>
 
@@ -201,13 +206,14 @@
                         <option value="image">Images</option>
                         <option value="video">Video</option>
                         <option value="archive">Installers / zips</option>
+                        <option value="ebook">Ebooks (Calibre)</option>
                         <option value="text">Text</option>
                         <option value="other">Other</option>
                     </select>
                     <select id="decision">
                         <option value="undecided">Undecided only</option>
                         <option value="">All decisions</option>
-                        <option value="critical">Critical</option>
+                        <option value="critical">Current</option>
                         <option value="keep_local">Keep local</option>
                         <option value="archive">Archive</option>
                         <option value="delete">Delete</option>
@@ -242,10 +248,10 @@
 
             <div class="card" id="detail">
                 <h2>Decide</h2>
-                <p class="muted">If you hesitate, Archive — not Critical.</p>
+                <p class="muted">If you hesitate, Archive — not Current. Current is not iCloud.</p>
                 <div id="detailBody" class="muted">Pick a file on the left.</div>
                 <div class="actions">
-                    <button type="button" data-d="critical">1 Critical</button>
+                    <button type="button" data-d="critical">1 Current</button>
                     <button type="button" data-d="keep_local">2 Keep local</button>
                     <button type="button" data-d="archive">3 Archive</button>
                     <button type="button" data-d="delete" class="btn-danger">4 Delete</button>
@@ -254,7 +260,7 @@
                 </div>
                 <div class="keys">
                     Keys: 1–4 decide, Space skip, J/K next/prev.<br>
-                    Delete is a move to Triage Trash, not emptying iCloud yet.
+                    Delete moves into Triage Trash on this Mac.
                 </div>
             </div>
         </div>
@@ -264,7 +270,6 @@
             <p class="muted">Same contents. Keep one, send the rest to Triage Trash.</p>
             <div id="dups"></div>
         </div>
-        <div id="applyMsg"></div>
     </div>
 </div>
 <script>
@@ -285,7 +290,10 @@ function destPayload() {
 function tagFor(decision, dup) {
     let html = "";
     if (dup) html += '<span class="tag dup">dup</span>';
-    if (decision) html += `<span class="tag ${decision}">${decision}</span>`;
+    if (decision) {
+        const label = decision === "critical" ? "current" : decision;
+        html += `<span class="tag ${decision}">${label}</span>`;
+    }
     return html;
 }
 
@@ -362,9 +370,14 @@ async function selectFile(id) {
     } else {
         preview = `<div class="preview">${escapeHtml(rec.preview?.note || "No preview")}</div>`;
     }
+    let dupBtn = "";
+    if (rec.dup_group) {
+        dupBtn = `<p><button type="button" data-keep="${rec.dup_group}" data-id="${rec.id}">Keep this, trash other copies</button></p>`;
+    }
     $("detailBody").innerHTML = `
         <p><b>${escapeHtml(rec.name)}</b></p>
         <p class="muted">${escapeHtml(rec.path)}<br>${rec.size_label} · ${rec.type_group} · ${rec.mtime_label}</p>
+        ${dupBtn}
         ${preview}
     `;
 }
@@ -432,6 +445,7 @@ $("scanBtn").onclick = async () => {
         if (st.ready || s.phase === "done") {
             clearInterval(pollTimer);
             $("scanStatus").textContent = "Scan complete. Nothing moved.";
+            $("applyMsg").innerHTML = "";
             const summary = await fetch("/api/summary").then(r => r.json());
             showWork(summary);
         }
@@ -449,19 +463,28 @@ $("folders").addEventListener("click", (e) => {
     loadFiles();
 });
 $("detail").addEventListener("click", (e) => {
+    const keep = e.target.closest("[data-keep]");
+    if (keep) return;
     const btn = e.target.closest("[data-d]");
     if (btn) decide(btn.dataset.d === "none" ? null : btn.dataset.d);
+});
+async function keepDuplicate(groupId, keepId) {
+    await fetch("/api/duplicates/" + groupId + "/keep", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({keep_id: keepId}),
+    });
+    const summary = await fetch("/api/summary").then(r => r.json());
+    showWork(summary);
+}
+$("detail").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-keep]");
+    if (btn) keepDuplicate(btn.dataset.keep, btn.dataset.id);
 });
 $("dups").addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-keep]");
     if (!btn) return;
-    await fetch("/api/duplicates/" + btn.dataset.keep + "/keep", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({keep_id: btn.dataset.id}),
-    });
-    const summary = await fetch("/api/summary").then(r => r.json());
-    showWork(summary);
+    keepDuplicate(btn.dataset.keep, btn.dataset.id);
 });
 ["q","type_group","decision","sort","older","dups"].forEach(id => {
     $(id).addEventListener("change", loadFiles);
@@ -480,9 +503,10 @@ $("applyBtn").onclick = async () => {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({dry_run: false}),
     }).then(r => r.json());
-    $("applyMsg").innerHTML = `<div class="${result.failed ? "error" : "ok"}">Moved ${result.moved}, failed ${result.failed}.</div>`;
+    $("applyMsg").innerHTML = `<div class="${result.failed ? "error" : "ok"}">Moved ${result.moved}, failed ${result.failed}. Files are on this Mac (Current / Keep / Archive / Triage Trash) — not extra iCloud.</div>`;
     const summary = await fetch("/api/summary").then(r => r.json());
     showWork(summary);
+    $("applyMsg").scrollIntoView({behavior: "smooth", block: "nearest"});
 };
 
 document.addEventListener("keydown", (e) => {

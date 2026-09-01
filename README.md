@@ -173,9 +173,9 @@ Confirm the name matches `ollama list` and `config.yaml`, e.g. `hermes-auditor:l
 
 ## 📂 File Triage (too many documents)
 
-If iCloud Drive is full of documents you have not sorted yet, **do not buy a management app first.** Duplicate finders only catch exact copies; organisers help after you already know what to keep.
+If iCloud Drive is full of documents you have not sorted yet, **do not buy more iCloud** and **do not buy another management app.** You already have Duplicate Detective, Photo Sweeper, Calibre, and Hazel — they each cover one lane. The 2 TB iMac is the store for the ~200 GB.
 
-Use the local **File Triage** tool in this repo: scan a folder, look at the largest files first, preview, then mark **Critical / Keep local / Archive / Delete**. Nothing moves until you click Apply. Deletes go to a recoverable Triage Trash folder.
+Use the local **File Triage** tool: copy Drive onto the SSD, turn iCloud Drive off, then scan, mark **Current / Keep local / Archive / Delete**, and Apply. Deletes go to a recoverable Triage Trash folder.
 
 ```bash
 python file_triage_ui.py          # http://127.0.0.1:5051
