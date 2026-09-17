@@ -260,6 +260,8 @@ exec python3 desktop_app.py
 # Make in-repo helpers executable
 chmod +x "$ROOT"/mac_shortcuts/*.command 2>/dev/null || true
 chmod +x "$ROOT/Launch Presentation Generator.command" 2>/dev/null || true
+chmod +x "$ROOT/Launch PRAL Checker.command" 2>/dev/null || true
+chmod +x "$ROOT/pral" 2>/dev/null || true
 chmod +x "$ROOT/desktop_app.py" 2>/dev/null || true
 chmod +x "$ROOT/install_desktop_shortcuts.sh" 2>/dev/null || true
 

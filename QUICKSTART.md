@@ -48,8 +48,12 @@ Open **http://127.0.0.1:5051**. See `FILE_TRIAGE.md`.
 
 ### PRAL Checker (food acidity)
 
-```bash
-python pral_ui.py
+On a Mac the command is `python3`, and you must be in the project folder (not `~`):
+
+```zsh
+cd ~/Wellbeing-Log
+python3 pral_ui.py
+# or: ./pral
 ```
 
 Open **http://127.0.0.1:5052**. Type nutrients or tap a common food. See `PRAL.md`.

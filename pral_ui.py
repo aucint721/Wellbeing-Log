@@ -8,12 +8,19 @@ Default bind is 127.0.0.1:5052. Override with PRAL_HOST / PRAL_PORT / PORT.
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+os.chdir(ROOT)
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from flask import Flask, jsonify, render_template, request
 
 from pral import catalog_payload, calculate_pral, find_food, food_pral, meal_pral, search_foods
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=str(ROOT / "templates"))
 
 
 @app.get("/")

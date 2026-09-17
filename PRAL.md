@@ -26,20 +26,31 @@ PRAL (mEq) = 0.49 × protein (g)
 
 Enter amounts **per 100 g**, then set the serving. The app scales the same way for built-in foods.
 
-## Run it
+## Run it (Mac)
 
-```bash
-python pral_ui.py              # http://127.0.0.1:5052
-python desktop_pral.py         # native window
-python pral.py --multipliers
-python pral.py food banana
-python pral.py calc -p 20 -P 200 -k 300 -m 25 -c 10 --grams 100
-python pral.py meal banana:118 cheddar:30 potato:170
-python pral.py search cheese
-python pral.py --list-foods
+macOS does not ship a `python` command. Use **`python3`**, and run from the project folder — not `~`.
+
+```zsh
+cd ~/Wellbeing-Log
+python3 pral_ui.py              # http://127.0.0.1:5052
 ```
 
-Desktop shortcut (after `./install_desktop_shortcuts.sh`): **6. Open PRAL Checker**.
+Or the launcher (finds `python3` and the project folder for you):
+
+```zsh
+cd ~/Wellbeing-Log
+./pral                          # web UI
+./pral desktop                  # native window
+./pral food banana
+./pral calc -p 20 -P 200 -k 300 -m 25 -c 10 --grams 100
+./pral meal banana:118 cheddar:30 potato:170
+./pral search cheese
+./pral --list-foods
+```
+
+Double-click **Launch PRAL Checker.command** in the project folder, or after `./install_desktop_shortcuts.sh` use **6. Open PRAL Checker** on the Desktop.
+
+If `python3` is also missing: double-click **1. Setup Presentation Generator**, or run `xcode-select --install`.
 
 Override host/port with `PRAL_HOST`, `PRAL_PORT`, or `PORT`.
 

@@ -303,13 +303,13 @@ def cli(argv: list[str] | None = None) -> int:
         description="Check food acidity (PRAL) from the five main multipliers.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Examples:\n"
-            "  python pral.py calc -p 20 -P 200 -k 300 -m 25 -c 10\n"
-            "  python pral.py food banana\n"
-            "  python pral.py food cheddar --grams 30\n"
-            "  python pral.py search cheese\n"
-            "  python pral.py meal banana:118 cheddar:30 potato:170\n"
-            "  python pral.py --list-foods\n"
+            "Examples (Mac: python3, or ./pral …):\n"
+            "  python3 pral.py calc -p 20 -P 200 -k 300 -m 25 -c 10\n"
+            "  python3 pral.py food banana\n"
+            "  python3 pral.py food cheddar --grams 30\n"
+            "  python3 pral.py search cheese\n"
+            "  python3 pral.py meal banana:118 cheddar:30 potato:170\n"
+            "  python3 pral.py --list-foods\n"
         ),
     )
     parser.add_argument("--list-foods", action="store_true", help="List built-in foods")
@@ -382,7 +382,7 @@ def cli(argv: list[str] | None = None) -> int:
         if food is None:
             matches = search_foods(args.name)
             if not matches:
-                print(f"No food matched {args.name!r}. Try: python pral.py search {args.name}")
+                print(f"No food matched {args.name!r}. Try: python3 pral.py search {args.name}")
                 return 1
             if len(matches) > 1:
                 print(f"Several foods matched {args.name!r}:")
