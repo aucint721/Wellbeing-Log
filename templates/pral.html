@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRAL Checker — food acidity</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #334155 100%);
+            color: #0f172a;
+            min-height: 100vh;
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 20px; }
+        .header { color: #fff; text-align: center; margin-bottom: 22px; }
+        .header h1 { font-size: 2.2em; letter-spacing: -0.03em; }
+        .header p { opacity: 0.9; margin-top: 6px; }
+        .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+        .pill {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 0.82em;
+        }
+        .formula {
+            margin-top: 14px;
+            font-size: 0.82em;
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.45);
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+        .layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 16px; }
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            margin-bottom: 16px;
+        }
+        h2 { font-size: 1.12em; margin-bottom: 6px; }
+        .muted { color: #64748b; font-size: 0.9em; line-height: 1.45; margin-bottom: 14px; }
+        label { display: block; font-weight: 600; margin: 0 0 6px; color: #1e293b; font-size: 0.88em; }
+        input[type="number"], input[type="search"], input[type="text"] {
+            width: 100%;
+            padding: 11px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        input:focus { outline: none; border-color: #14b8a6; }
+        .nutrients { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grams-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin: 12px 0 4px; }
+        button, .chip {
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.92em;
+        }
+        button:hover, .chip:hover { border-color: #2dd4bf; }
+        .btn-primary {
+            background: #0f766e;
+            color: #fff;
+            border-color: #0f766e;
+            font-weight: 700;
+            padding: 12px 16px;
+        }
+        .btn-ghost { background: #f8fafc; }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .result {
+            border-radius: 16px;
+            padding: 18px;
+            margin-top: 16px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+        }
+        .result.alkaline { background: #ecfdf5; border-color: #99f6e4; }
+        .result.acid { background: #fff1f2; border-color: #fecdd3; }
+        .result.neutral { background: #f8fafc; border-color: #e2e8f0; }
+        .pral-number {
+            font-size: 2.4em;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+        .result.alkaline .pral-number { color: #0f766e; }
+        .result.acid .pral-number { color: #be123c; }
+        .result.neutral .pral-number { color: #334155; }
+        .pral-label { font-weight: 700; margin-top: 6px; }
+        .meter {
+            position: relative;
+            height: 14px;
+            border-radius: 999px;
+            margin: 14px 0 8px;
+            background: linear-gradient(90deg, #0f766e 0%, #99f6e4 38%, #e2e8f0 50%, #fecdd3 62%, #be123c 100%);
+        }
+        .needle {
+            position: absolute;
+            top: -5px;
+            width: 4px;
+            height: 24px;
+            background: #0f172a;
+            border-radius: 4px;
+            transform: translateX(-50%);
+        }
+        .meter-labels { display: flex; justify-content: space-between; font-size: 0.75em; color: #64748b; }
+        .contrib { display: grid; gap: 8px; margin-top: 14px; }
+        .contrib-row { display: grid; grid-template-columns: 110px 1fr 64px; gap: 8px; align-items: center; font-size: 0.88em; }
+        .bar-track { background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; }
+        .bar {
+            height: 8px;
+            border-radius: 999px;
+            min-width: 0;
+        }
+        .bar.acid { background: #fb7185; }
+        .bar.alkaline { background: #2dd4bf; }
+        .contrib-val { text-align: right; font-variant-numeric: tabular-nums; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+        .chip.active { background: #0f766e; color: #fff; border-color: #0f766e; }
+        .food-list { max-height: 420px; overflow: auto; border-top: 1px solid #f1f5f9; }
+        .food {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            padding: 10px 4px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            align-items: center;
+        }
+        .food:hover, .food.active { background: #f0fdfa; }
+        .food .name { font-weight: 600; }
+        .food .meta { color: #64748b; font-size: 0.8em; }
+        .badge {
+            font-size: 0.78em;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-variant-numeric: tabular-nums;
+        }
+        .badge.alkaline { background: #ccfbf1; color: #115e59; }
+        .badge.acid { background: #ffe4e6; color: #9f1239; }
+        .badge.neutral { background: #e2e8f0; color: #334155; }
+        .plate-item {
+            display: grid;
+            grid-template-columns: 1fr 90px auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .plate-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 12px;
+            font-size: 1.05em;
+        }
+        .error { background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 10px; margin-top: 10px; }
+        .note { font-size: 0.8em; color: #64748b; margin-top: 12px; line-height: 1.4; }
+        @media (max-width: 900px) {
+            .layout, .nutrients, .grams-row, .plate-item { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <h1>PRAL Checker</h1>
+        <p>Check how acid- or alkaline-forming a food is from the five main multipliers.</p>
+        <div class="pills">
+            <span class="pill">Protein × 0.49</span>
+            <span class="pill">Phosphorus × 0.037</span>
+            <span class="pill">Potassium × −0.021</span>
+            <span class="pill">Magnesium × −0.026</span>
+            <span class="pill">Calcium × −0.013</span>
+        </div>
+        <div class="formula" id="formula">PRAL (mEq) = 0.49×protein + 0.037×P − 0.021×K − 0.026×Mg − 0.013×Ca</div>
+    </div>
+
+    <div class="layout">
+        <div>
+            <div class="card">
+                <h2>Quick calculator</h2>
+                <p class="muted">Enter nutrients per 100 g, then set the serving. Values update as you type.</p>
+                <div class="nutrients" id="nutrient-fields"></div>
+                <div class="grams-row">
+                    <div>
+                        <label for="grams">Serving (g)</label>
+                        <input id="grams" type="number" min="0" step="1" value="100">
+                    </div>
+                    <button class="btn-ghost" type="button" id="reset-calc">Clear</button>
+                </div>
+                <div class="result" id="calc-result"></div>
+                <div class="btn-row">
+                    <button class="btn-primary" type="button" id="add-custom">Add this serving to the plate</button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <h2>Common foods</h2>
+                <p class="muted">Tap a food to load its nutrients. Scores are computed from the multipliers, not a lookup table.</p>
+                <input id="search" type="search" placeholder="Search banana, cheddar, potato…">
+                <div class="chips" id="categories"></div>
+                <div class="food-list" id="foods"></div>
+            </div>
+            <div class="card">
+                <h2>Plate</h2>
+                <p class="muted">Add a few foods and see the running acid load.</p>
+                <div id="plate-items"></div>
+                <div class="plate-total" id="plate-total"></div>
+                <div class="btn-row">
+                    <button class="btn-ghost" type="button" id="clear-plate">Clear plate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="note">Dietary estimate only (Remer &amp; Manz 1995). Taste is not the same as renal acid load — lemon is sour but alkaline-forming. Not medical advice.</p>
+</div>
+<script>
+const MULTIPLIERS = { protein: 0.49, phosphorus: 0.037, potassium: -0.021, magnesium: -0.026, calcium: -0.013 };
+const LABELS = { protein: "Protein", phosphorus: "Phosphorus", potassium: "Potassium", magnesium: "Magnesium", calcium: "Calcium" };
+const UNITS = { protein: "g", phosphorus: "mg", potassium: "mg", magnesium: "mg", calcium: "mg" };
+const KEYS = Object.keys(MULTIPLIERS);
+const METER_MIN = -20;
+const METER_MAX = 30;
+const PLATE_KEY = "pral-plate";
+
+let catalog = [];
+let category = "";
+let selectedId = "";
+let plate = [];
+
+function num(id) {
+    const el = document.getElementById(id);
+    const n = parseFloat(el.value);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function classify(pral) {
+    if (pral <= -8) return { name: "Strongly alkaline-forming", tone: "alkaline" };
+    if (pral <= -3) return { name: "Alkaline-forming", tone: "alkaline" };
+    if (pral < 3) return { name: "Roughly neutral", tone: "neutral" };
+    if (pral < 15) return { name: "Acid-forming", tone: "acid" };
+    return { name: "Strongly acid-forming", tone: "acid" };
+}
+
+function calcFromInputs() {
+    const grams = num("grams");
+    const scale = grams / 100;
+    const contributions = {};
+    let total = 0;
+    KEYS.forEach((key) => {
+        const amount = num(key) * scale;
+        const contrib = MULTIPLIERS[key] * amount;
+        contributions[key] = contrib;
+        total += contrib;
+    });
+    return { pral: total, grams, contributions, label: classify(total) };
+}
+
+function maxAbs(contrib) {
+    return Math.max(1, ...Object.values(contrib).map((v) => Math.abs(v)));
+}
+
+function renderResult(target, result, title) {
+    const pct = ((Math.max(METER_MIN, Math.min(METER_MAX, result.pral)) - METER_MIN) / (METER_MAX - METER_MIN)) * 100;
+    const peak = maxAbs(result.contributions);
+    const rows = KEYS.map((key) => {
+        const value = result.contributions[key];
+        const width = Math.max(4, (Math.abs(value) / peak) * 100);
+        const tone = value >= 0 ? "acid" : "alkaline";
+        return `<div class="contrib-row">
+            <div>${LABELS[key]}</div>
+            <div class="bar-track"><div class="bar ${tone}" style="width:${width}%"></div></div>
+            <div class="contrib-val">${value >= 0 ? "+" : ""}${value.toFixed(2)}</div>
+        </div>`;
+    }).join("");
+    target.className = "result " + result.label.tone;
+    target.innerHTML = `
+        ${title ? `<div class="muted" style="margin-bottom:8px">${title}</div>` : ""}
+        <div class="pral-number">${result.pral >= 0 ? "+" : ""}${result.pral.toFixed(1)}</div>
+        <div class="pral-label">${result.label.name}</div>
+        <div class="muted">${result.grams} g serving · mEq PRAL</div>
+        <div class="meter"><div class="needle" style="left:${pct}%"></div></div>
+        <div class="meter-labels"><span>Alkaline</span><span>Neutral</span><span>Acid</span></div>
+        <div class="contrib">${rows}</div>
+    `;
+}
+
+function updateCalc() {
+    renderResult(document.getElementById("calc-result"), calcFromInputs());
+}
+
+function nutrientFields() {
+    const box = document.getElementById("nutrient-fields");
+    box.innerHTML = KEYS.map((key) => `
+        <div>
+            <label for="${key}">${LABELS[key]} (${UNITS[key]} / 100 g)</label>
+            <input id="${key}" type="number" min="0" step="0.1" value="0">
+        </div>
+    `).join("");
+    KEYS.concat(["grams"]).forEach((id) => {
+        document.getElementById(id).addEventListener("input", updateCalc);
+    });
+}
+
+function badge(pral, label) {
+    return `<span class="badge ${label.tone}">${pral >= 0 ? "+" : ""}${pral.toFixed(1)}</span>`;
+}
+
+function filteredFoods() {
+    const q = document.getElementById("search").value.trim().toLowerCase();
+    return catalog.filter((item) => {
+        if (category && item.category !== category) return false;
+        if (q && !item.search.includes(q)) return false;
+        return true;
+    });
+}
+
+function renderFoods() {
+    const box = document.getElementById("foods");
+    const rows = filteredFoods();
+    if (!rows.length) {
+        box.innerHTML = `<p class="muted">No foods match.</p>`;
+        return;
+    }
+    box.innerHTML = rows.map((item) => `
+        <div class="food ${item.id === selectedId ? "active" : ""}" data-id="${item.id}">
+            <div>
+                <div class="name">${item.name}</div>
+                <div class="meta">${item.category} · usual ${item.default_grams} g</div>
+            </div>
+            ${badge(item.pral_per_100, item.label_per_100)}
+            <button class="btn-ghost" type="button" data-add="${item.id}">Add</button>
+        </div>
+    `).join("");
+    box.querySelectorAll(".food").forEach((el) => {
+        el.addEventListener("click", (event) => {
+            if (event.target.closest("[data-add]")) return;
+            loadFood(el.dataset.id);
+        });
+    });
+    box.querySelectorAll("[data-add]").forEach((el) => {
+        el.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const food = catalog.find((item) => item.id === el.dataset.add);
+            loadFood(food.id, food.default_grams);
+            plate.push({ id: food.id, grams: food.default_grams });
+            savePlate();
+            renderPlate();
+        });
+    });
+}
+
+function renderCategories(list) {
+    const box = document.getElementById("categories");
+    const chips = ["All"].concat(list);
+    box.innerHTML = chips.map((name) => {
+        const value = name === "All" ? "" : name;
+        const active = category === value ? "active" : "";
+        return `<button type="button" class="chip ${active}" data-cat="${value}">${name}</button>`;
+    }).join("");
+    box.querySelectorAll(".chip").forEach((el) => {
+        el.addEventListener("click", () => {
+            category = el.dataset.cat;
+            renderCategories(list);
+            renderFoods();
+        });
+    });
+}
+
+function loadFood(id, grams) {
+    const food = catalog.find((item) => item.id === id);
+    if (!food) return;
+    selectedId = id;
+    KEYS.forEach((key) => {
+        document.getElementById(key).value = food.per_100[key];
+    });
+    document.getElementById("grams").value = grams != null ? grams : food.default_grams;
+    updateCalc();
+    renderFoods();
+}
+
+function savePlate() {
+    localStorage.setItem(PLATE_KEY, JSON.stringify(plate));
+}
+
+function renderPlate() {
+    const box = document.getElementById("plate-items");
+    const totalBox = document.getElementById("plate-total");
+    if (!plate.length) {
+        box.innerHTML = `<p class="muted">Nothing on the plate yet.</p>`;
+        totalBox.innerHTML = "";
+        return;
+    }
+    let total = 0;
+    let grams = 0;
+    const contrib = { protein: 0, phosphorus: 0, potassium: 0, magnesium: 0, calcium: 0 };
+    box.innerHTML = plate.map((item, index) => {
+        const food = catalog.find((row) => row.id === item.id);
+        const scale = item.grams / 100;
+        let pral = 0;
+        KEYS.forEach((key) => {
+            const c = MULTIPLIERS[key] * food.per_100[key] * scale;
+            contrib[key] += c;
+            pral += c;
+        });
+        total += pral;
+        grams += item.grams;
+        const label = classify(pral);
+        return `<div class="plate-item">
+            <div>
+                <div class="name">${food.name}</div>
+                <div class="meta">${badge(pral, label)}</div>
+            </div>
+            <input type="number" min="1" step="1" value="${item.grams}" data-index="${index}">
+            <button class="btn-ghost" type="button" data-remove="${index}">Remove</button>
+        </div>`;
+    }).join("");
+    const label = classify(total);
+    totalBox.innerHTML = `<strong>Plate PRAL</strong> <span class="badge ${label.tone}">${total >= 0 ? "+" : ""}${total.toFixed(1)} mEq · ${grams} g · ${label.name}</span>`;
+    box.querySelectorAll("input").forEach((el) => {
+        el.addEventListener("change", () => {
+            plate[Number(el.dataset.index)].grams = Math.max(0, parseFloat(el.value) || 0);
+            savePlate();
+            renderPlate();
+        });
+    });
+    box.querySelectorAll("[data-remove]").forEach((el) => {
+        el.addEventListener("click", () => {
+            plate.splice(Number(el.dataset.remove), 1);
+            savePlate();
+            renderPlate();
+        });
+    });
+}
+
+function addCurrentToPlate() {
+    const grams = num("grams");
+    if (selectedId) {
+        plate.push({ id: selectedId, grams });
+    } else {
+        const custom = {
+            id: "custom_" + Date.now(),
+            name: "Custom serving",
+            category: "Custom",
+            default_grams: grams,
+            per_100: {},
+            search: "custom serving",
+            pral_per_100: 0,
+            label_per_100: classify(0),
+        };
+        KEYS.forEach((key) => { custom.per_100[key] = num(key); });
+        const per100 = calcFromInputs();
+        custom.pral_per_100 = (per100.pral / Math.max(grams, 1)) * 100;
+        custom.label_per_100 = classify(custom.pral_per_100);
+        catalog.unshift(custom);
+        selectedId = custom.id;
+        plate.push({ id: custom.id, grams });
+        renderFoods();
+    }
+    savePlate();
+    renderPlate();
+}
+
+function resetCalc() {
+    selectedId = "";
+    KEYS.forEach((key) => { document.getElementById(key).value = 0; });
+    document.getElementById("grams").value = 100;
+    updateCalc();
+    renderFoods();
+}
+
+async function boot() {
+    nutrientFields();
+    const res = await fetch("/api/bootstrap");
+    const data = await res.json();
+    catalog = data.foods;
+    document.getElementById("formula").textContent = data.formula;
+    Object.assign(MULTIPLIERS, data.multipliers);
+    Object.assign(LABELS, data.labels);
+    Object.assign(UNITS, data.units);
+    renderCategories(data.categories);
+    renderFoods();
+    try {
+        plate = JSON.parse(localStorage.getItem(PLATE_KEY) || "[]");
+        plate = plate.filter((item) => catalog.some((food) => food.id === item.id));
+    } catch (err) {
+        plate = [];
+    }
+    renderPlate();
+    updateCalc();
+}
+
+document.getElementById("search").addEventListener("input", renderFoods);
+document.getElementById("reset-calc").addEventListener("click", resetCalc);
+document.getElementById("add-custom").addEventListener("click", addCurrentToPlate);
+document.getElementById("clear-plate").addEventListener("click", () => {
+    plate = [];
+    savePlate();
+    renderPlate();
+});
+boot();
+</script>
+</body>
+</html>

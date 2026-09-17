@@ -225,6 +225,25 @@ fi
 exec python3 desktop_file_triage.py
 "
 
+# --- 6. PRAL Checker ---
+write_cmd "6. Open PRAL Checker.command" "#!/bin/zsh
+set -e
+ROOT=\"$ROOT\"
+cd \"\$ROOT\"
+if [ -f \"venv/bin/activate\" ]; then
+  source \"venv/bin/activate\"
+elif [ -f \".venv/bin/activate\" ]; then
+  source \".venv/bin/activate\"
+else
+  echo \"Setup is not done yet.\"
+  echo \"Double-click: 1. Setup Presentation Generator\"
+  echo \"\"
+  read -k 1 \"?Press any key to close...\"
+  exit 1
+fi
+exec python3 desktop_pral.py
+"
+
 # Also keep the older single-name launcher for convenience
 write_cmd "Presentation Generator.command" "#!/bin/zsh
 set -e
@@ -253,6 +272,7 @@ echo "  1. Setup Presentation Generator"
 echo "  2. Set Claude API Key"
 echo "  4. Open Presentation Generator"
 echo "  5. Open File Triage   (sort / delete / store documents)"
+echo "  6. Open PRAL Checker  (food acidity from the five multipliers)"
 echo ""
 echo "Later: 3. Update Presentation Generator"
 echo "If macOS blocks a shortcut: right-click → Open → Open."

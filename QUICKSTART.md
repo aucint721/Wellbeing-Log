@@ -46,6 +46,14 @@ python file_triage_ui.py
 
 Open **http://127.0.0.1:5051**. See `FILE_TRIAGE.md`.
 
+### PRAL Checker (food acidity)
+
+```bash
+python pral_ui.py
+```
+
+Open **http://127.0.0.1:5052**. Type nutrients or tap a common food. See `PRAL.md`.
+
 ## Step 3: Choose Your Interface
 
 ### Option A: Web Interface (Easiest!)
