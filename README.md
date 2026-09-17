@@ -191,7 +191,7 @@ See `FILE_TRIAGE.md` for the four-bucket policy, iCloud Drive path, and keyboard
 
 ## 🍋 PRAL Checker (food acidity)
 
-Quick check of how acid- or alkaline-forming a food is from the five Remer & Manz multipliers (protein, phosphorus, potassium, magnesium, calcium). Positive PRAL is acid-forming; negative is alkaline-forming.
+Quick check of how acid- or alkaline-forming a food is from the five Remer & Manz multipliers (protein, phosphorus, potassium, magnesium, calcium). Positive PRAL is acid-forming; negative is alkaline-forming. Taste is not the same as acid load.
 
 ```bash
 python pral_ui.py                 # http://127.0.0.1:5052

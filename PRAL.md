@@ -2,7 +2,7 @@
 
 PRAL (Potential Renal Acid Load) estimates how acid- or alkaline-forming a food is for the kidneys. This app uses the five **Remer & Manz (1995)** multipliers — it does not look up a published score.
 
-Positive PRAL = acid-forming. Negative PRAL = alkaline-forming. Taste is not the same thing: lemon is sour, but alkaline-forming.
+Positive PRAL = acid-forming. Negative PRAL = alkaline-forming. Taste is not the same thing: lemon is sour, but not acid-forming.
 
 This is a dietary estimate, not a medical test.
 
