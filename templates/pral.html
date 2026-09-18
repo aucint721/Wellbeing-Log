@@ -53,35 +53,29 @@
             border-radius: 10px;
             font-size: 15px;
         }
-        input[type="number"] {
-            -moz-appearance: textfield;
-            appearance: textfield;
-        }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-            display: none;
-        }
         input:focus { outline: none; border-color: #14b8a6; }
         .stepper {
-            display: grid;
-            grid-template-columns: 1fr 34px;
+            display: flex;
+            flex-direction: row;
             align-items: stretch;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
-            overflow: hidden;
             background: #fff;
+            overflow: hidden;
         }
         .stepper:focus-within { border-color: #14b8a6; }
-        .stepper input[type="number"] {
+        .stepper input {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: auto;
             border: none;
             border-radius: 0;
-            min-width: 0;
             padding: 11px 12px;
         }
         .stepper input:focus { outline: none; }
         .stepper-btns {
+            flex: 0 0 40px;
+            width: 40px;
             display: grid;
             grid-template-rows: 1fr 1fr;
             border-left: 1px solid #e2e8f0;
@@ -194,13 +188,13 @@
         .badge.neutral { background: #e2e8f0; color: #334155; }
         .plate-item {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 148px auto;
+            grid-template-columns: minmax(0, 1fr) 160px auto;
             gap: 8px;
             align-items: center;
             padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        .plate-item .stepper input[type="number"] {
+        .plate-item .stepper input {
             padding: 8px 8px;
         }
         .plate-total {
@@ -242,7 +236,7 @@
                     <div>
                         <label for="grams">Serving (g)</label>
                         <div class="stepper">
-                            <input id="grams" type="number" min="0" step="1" value="100" inputmode="decimal">
+                            <input id="grams" type="text" inputmode="decimal" min="0" step="1" value="100">
                             <div class="stepper-btns">
                                 <button type="button" class="step-up" tabindex="-1" aria-label="Increase serving">▲</button>
                                 <button type="button" class="step-down" tabindex="-1" aria-label="Decrease serving">▼</button>
@@ -364,7 +358,7 @@ function stepperMarkup(attrs) {
     const id = attrs.id ? ` id="${attrs.id}"` : "";
     const extra = attrs.extra || "";
     return `<div class="stepper">
-        <input type="number"${id} min="${attrs.min}" step="${attrs.step}" value="${attrs.value}" inputmode="decimal" ${extra}>
+        <input type="text" inputmode="decimal"${id} min="${attrs.min}" step="${attrs.step}" value="${attrs.value}" ${extra}>
         <div class="stepper-btns">
             <button type="button" class="step-up" tabindex="-1" aria-label="Increase">▲</button>
             <button type="button" class="step-down" tabindex="-1" aria-label="Decrease">▼</button>
