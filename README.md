@@ -137,8 +137,15 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ├── file_triage_ui.py            # File Triage web UI (localhost:5051)
 ├── desktop_file_triage.py       # Native window for File Triage
 ├── FILE_TRIAGE.md               # Four-bucket sort policy
+├── pral.py                      # PRAL acid-load calculator + food catalog
+├── pral                         # Mac launcher (python3; run from anywhere)
+├── pral_ui.py                   # PRAL web UI (localhost:5052)
+├── desktop_pral.py              # Native window for PRAL Checker
+├── Launch PRAL Checker.command  # Double-click on Mac
+├── PRAL.md                      # Multipliers and how to read the score
 ├── templates/index.html         # Presentation Web UI
 ├── templates/file_triage.html   # File Triage UI
+├── templates/pral.html          # PRAL Checker UI
 ├── theme_assets/                # Photo theme backgrounds (Unsplash)
 ├── scripts/fetch_theme_photos.py
 ├── scripts/make_triage_demo.py  # Sample messy folder for triage
@@ -183,6 +190,19 @@ python desktop_file_triage.py     # native window
 ```
 
 See `FILE_TRIAGE.md` for the four-bucket policy, iCloud Drive path, and keyboard shortcuts.
+
+## 🍋 PRAL Checker (food acidity)
+
+Quick check of how acid- or alkaline-forming a food is from the five Remer & Manz multipliers (protein, phosphorus, potassium, magnesium, calcium). Positive PRAL is acid-forming; negative is alkaline-forming. Taste is not the same as acid load.
+
+```zsh
+cd ~/Wellbeing-Log
+python3 pral_ui.py                # http://127.0.0.1:5052  (Mac: python3, not python)
+./pral                            # same UI; also: ./pral food banana
+python3 desktop_pral.py           # native window
+```
+
+See `PRAL.md` for the formula, labels, and CLI examples.
 
 ## 🎉 Get Started
 
