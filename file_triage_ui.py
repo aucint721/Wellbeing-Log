@@ -8,6 +8,7 @@ This app can move files on disk after you confirm Apply — keep it local.
 
 from __future__ import annotations
 
+import mimetypes
 import os
 import threading
 from pathlib import Path
@@ -23,6 +24,8 @@ from file_triage import (
 )
 
 app = Flask(__name__)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.jinja_env.auto_reload = True
 ROOT = Path(__file__).resolve().parent
 
 _lock = threading.Lock()
@@ -190,7 +193,8 @@ def file_preview(fid: str):
     path = Path(rec["path"])
     if not path.exists():
         abort(404)
-    return send_file(path)
+    mime, _ = mimetypes.guess_type(path.name)
+    return send_file(path, as_attachment=False, mimetype=mime or "application/octet-stream")
 
 
 @app.post("/api/files/<fid>/decide")
