@@ -12,7 +12,7 @@ This repo is a Python AI Presentation Generator (CLI + Flask Web UI). Designer l
 | Web UI | `python web_ui.py` | http://localhost:5050 — Flask on `0.0.0.0` (default port **5050** to avoid macOS AirPlay on 5000; override with `PORT=...`) |
 | CLI | `python cli.py <input.txt> -m claude -t sunset_gradient` | Core generation path |
 | File Triage | `python file_triage_ui.py` | http://127.0.0.1:5051 — local gather/view/decide for overflowing folders (iCloud Drive). Desktop: `python desktop_file_triage.py`. Binds localhost only. |
-| PRAL Checker | `python3 pral_ui.py` / `./pral` | http://127.0.0.1:5052 — food acidity from Remer & Manz multipliers. Mac has `python3`, not `python`; run from the repo folder. Desktop: `python3 desktop_pral.py` or `./pral desktop`. CLI: `./pral food banana`. |
+| PRAL Checker | `python3 pral_ui.py` / `./pral` | http://127.0.0.1:5052 — food acidity from Remer & Manz multipliers. Mac has `python3`, not `python`; run from the repo folder. ~240 local foods plus USDA FoodData Central search. Desktop: `python3 desktop_pral.py` or `./pral desktop`. CLI: `./pral food banana`, `./pral search kimchi --online`. |
 
 Standard install/run details: see `README.md`, `QUICKSTART.md`, and `package` scripts in those docs. Dependencies: `pip install -r requirements.txt` (includes `pyyaml` and `anthropic`).
 

@@ -11,8 +11,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import urllib.error
+import urllib.request
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Iterable
+
+ROOT = Path(__file__).resolve().parent
 
 # Remer & Manz 1995 — the commonly rounded main multipliers.
 # Protein and phosphorus push PRAL up (acid). Potassium, magnesium, and
@@ -41,94 +48,57 @@ NUTRIENT_LABELS: dict[str, str] = {
     "calcium": "Calcium",
 }
 
-# Typical values per 100 g (USDA-style). Default serving is a usual portion.
-# id, name, category, default_grams, protein_g, P_mg, K_mg, Mg_mg, Ca_mg
-_FOOD_ROWS: list[tuple] = [
-    ("beef_cooked", "Beef, cooked", "Meat & fish", 100, 26.1, 199, 318, 21, 18),
-    ("chicken_breast", "Chicken breast, cooked", "Meat & fish", 100, 31.0, 228, 256, 29, 15),
-    ("pork_cooked", "Pork, cooked", "Meat & fish", 100, 27.3, 226, 362, 24, 19),
-    ("turkey", "Turkey, cooked", "Meat & fish", 100, 29.0, 213, 249, 27, 14),
-    ("salmon", "Salmon, cooked", "Meat & fish", 120, 22.1, 252, 384, 30, 15),
-    ("tuna_canned", "Tuna, canned in water", "Meat & fish", 85, 23.6, 164, 237, 23, 11),
-    ("cod", "Cod, cooked", "Meat & fish", 100, 22.8, 138, 244, 32, 14),
-    ("cheddar", "Cheddar cheese", "Dairy & eggs", 30, 24.9, 512, 98, 28, 721),
-    ("parmesan", "Parmesan cheese", "Dairy & eggs", 20, 35.8, 694, 92, 44, 1184),
-    ("cottage", "Cottage cheese", "Dairy & eggs", 110, 11.1, 159, 104, 8, 83),
-    ("milk_whole", "Whole milk", "Dairy & eggs", 244, 3.3, 84, 132, 10, 113),
-    ("yogurt_plain", "Plain yogurt", "Dairy & eggs", 170, 3.5, 95, 155, 12, 121),
-    ("egg", "Egg, whole", "Dairy & eggs", 50, 12.6, 198, 138, 12, 56),
-    ("butter", "Butter", "Dairy & eggs", 14, 0.9, 24, 24, 2, 24),
-    ("white_bread", "White bread", "Grains", 30, 8.9, 98, 115, 23, 151),
-    ("wheat_bread", "Whole-wheat bread", "Grains", 30, 12.4, 180, 230, 75, 107),
-    ("white_rice", "White rice, cooked", "Grains", 150, 2.7, 43, 35, 12, 10),
-    ("brown_rice", "Brown rice, cooked", "Grains", 150, 2.6, 83, 86, 39, 10),
-    ("oats", "Oats, dry", "Grains", 40, 13.2, 410, 362, 138, 52),
-    ("pasta", "Pasta, cooked", "Grains", 140, 5.8, 58, 44, 18, 7),
-    ("quinoa", "Quinoa, cooked", "Grains", 150, 4.4, 152, 172, 64, 17),
-    ("potato", "Potato, baked", "Vegetables", 170, 2.5, 70, 535, 28, 15),
-    ("sweet_potato", "Sweet potato, baked", "Vegetables", 130, 2.0, 54, 475, 27, 38),
-    ("spinach", "Spinach, raw", "Vegetables", 30, 2.9, 49, 558, 79, 99),
-    ("broccoli", "Broccoli, cooked", "Vegetables", 80, 2.4, 67, 293, 21, 40),
-    ("carrot", "Carrot, raw", "Vegetables", 61, 0.9, 35, 320, 12, 33),
-    ("tomato", "Tomato, raw", "Vegetables", 120, 0.9, 24, 237, 11, 10),
-    ("cucumber", "Cucumber", "Vegetables", 100, 0.7, 24, 147, 13, 16),
-    ("lettuce", "Romaine lettuce", "Vegetables", 50, 1.2, 30, 247, 14, 33),
-    ("onion", "Onion, raw", "Vegetables", 70, 1.1, 29, 146, 10, 23),
-    ("kale", "Kale, raw", "Vegetables", 30, 4.3, 92, 491, 47, 254),
-    ("zucchini", "Zucchini, cooked", "Vegetables", 100, 1.1, 40, 264, 18, 18),
-    ("bell_pepper", "Bell pepper, raw", "Vegetables", 80, 0.9, 20, 211, 12, 10),
-    ("mushroom", "Mushrooms, cooked", "Vegetables", 70, 2.2, 86, 318, 9, 6),
-    ("celery", "Celery, raw", "Vegetables", 40, 0.7, 24, 260, 11, 40),
-    ("banana", "Banana", "Fruit", 118, 1.1, 22, 358, 27, 5),
-    ("apple", "Apple", "Fruit", 182, 0.3, 11, 107, 5, 6),
-    ("orange", "Orange", "Fruit", 131, 0.9, 14, 181, 10, 40),
-    ("lemon", "Lemon", "Fruit", 60, 1.1, 16, 138, 8, 26),
-    ("strawberry", "Strawberries", "Fruit", 152, 0.7, 24, 153, 13, 16),
-    ("raisins", "Raisins", "Fruit", 40, 3.1, 101, 749, 32, 50),
-    ("avocado", "Avocado", "Fruit", 50, 2.0, 52, 485, 29, 12),
-    ("blueberries", "Blueberries", "Fruit", 148, 0.7, 12, 77, 6, 6),
-    ("watermelon", "Watermelon", "Fruit", 152, 0.6, 11, 112, 10, 7),
-    ("grapes", "Grapes", "Fruit", 151, 0.7, 20, 191, 7, 10),
-    ("almonds", "Almonds", "Nuts & seeds", 28, 21.2, 481, 733, 270, 269),
-    ("walnuts", "Walnuts", "Nuts & seeds", 28, 15.2, 346, 441, 158, 98),
-    ("peanuts", "Peanuts", "Nuts & seeds", 28, 25.8, 376, 705, 168, 92),
-    ("pumpkin_seeds", "Pumpkin seeds", "Nuts & seeds", 28, 30.2, 1233, 809, 592, 46),
-    ("lentils", "Lentils, cooked", "Legumes", 100, 9.0, 180, 369, 36, 19),
-    ("chickpeas", "Chickpeas, cooked", "Legumes", 100, 8.9, 168, 291, 48, 49),
-    ("black_beans", "Black beans, cooked", "Legumes", 100, 8.9, 140, 355, 70, 27),
-    ("tofu", "Tofu, firm", "Legumes", 80, 8.1, 97, 121, 30, 350),
-    ("soy_milk", "Soy milk", "Legumes", 240, 2.9, 52, 118, 18, 25),
-    ("coffee", "Coffee, black", "Drinks", 240, 0.1, 7, 49, 3, 2),
-    ("tea", "Tea, black", "Drinks", 240, 0.0, 1, 37, 3, 0),
-    ("cola", "Cola", "Drinks", 355, 0.0, 11, 2, 1, 2),
-    ("beer", "Beer", "Drinks", 356, 0.5, 14, 27, 6, 4),
-    ("red_wine", "Red wine", "Drinks", 147, 0.1, 23, 127, 12, 8),
-    ("olive_oil", "Olive oil", "Extras", 14, 0.0, 0, 1, 0, 1),
-    ("honey", "Honey", "Extras", 21, 0.3, 4, 52, 2, 6),
-    ("white_sugar", "White sugar", "Extras", 12, 0.0, 0, 2, 0, 1),
-]
+FDC_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
+FDC_NUTRIENT_IDS = {
+    1003: "protein",
+    1087: "calcium",
+    1090: "magnesium",
+    1091: "phosphorus",
+    1092: "potassium",
+}
 
 
-def _food_from_row(row: tuple) -> dict[str, Any]:
-    fid, name, category, default_grams, protein, phosphorus, potassium, magnesium, calcium = row
+def _food_from_record(rec: dict[str, Any]) -> dict[str, Any]:
     per_100 = {
-        "protein": float(protein),
-        "phosphorus": float(phosphorus),
-        "potassium": float(potassium),
-        "magnesium": float(magnesium),
-        "calcium": float(calcium),
+        "protein": float(rec.get("protein") or 0),
+        "phosphorus": float(rec.get("phosphorus") or 0),
+        "potassium": float(rec.get("potassium") or 0),
+        "magnesium": float(rec.get("magnesium") or 0),
+        "calcium": float(rec.get("calcium") or 0),
     }
     per_100_result = calculate_pral(per_100, grams=100)
+    fid = str(rec["id"])
+    name = str(rec["name"])
+    category = str(rec.get("category") or "Extras")
+    source = rec.get("source") or "local"
     return {
         "id": fid,
         "name": name,
         "category": category,
-        "default_grams": int(default_grams),
+        "default_grams": int(rec.get("default_grams") or 100),
         "per_100": per_100,
         "pral_per_100": per_100_result["pral"],
         "label_per_100": per_100_result["label"],
         "search": f"{fid} {name} {category}".lower(),
+        "source": source,
+        "incomplete": bool(rec.get("incomplete")),
+        "detail": rec.get("detail") or "",
     }
+
+
+@lru_cache(maxsize=1)
+def foods() -> tuple[dict[str, Any], ...]:
+    path = ROOT / "pral_foods.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return tuple(_food_from_record(rec) for rec in payload["foods"])
+
+
+def categories() -> list[str]:
+    seen: list[str] = []
+    for item in foods():
+        if item["category"] not in seen:
+            seen.append(item["category"])
+    return seen
 
 
 def calculate_pral(nutrients: dict[str, float], grams: float = 100.0) -> dict[str, Any]:
@@ -168,18 +138,6 @@ def classify(pral: float) -> dict[str, str]:
     return {"id": "strongly_acid", "name": "Strongly acid-forming", "tone": "acid"}
 
 
-def foods() -> list[dict[str, Any]]:
-    return [_food_from_row(row) for row in _FOOD_ROWS]
-
-
-def categories() -> list[str]:
-    seen: list[str] = []
-    for row in _FOOD_ROWS:
-        if row[2] not in seen:
-            seen.append(row[2])
-    return seen
-
-
 def find_food(query: str) -> dict[str, Any] | None:
     q = (query or "").strip().lower()
     if not q:
@@ -208,6 +166,143 @@ def search_foods(query: str = "", category: str = "") -> list[dict[str, Any]]:
             continue
         results.append(item)
     return results
+
+
+def _usda_api_key() -> str:
+    return (
+        os.getenv("USDA_FDC_API_KEY")
+        or os.getenv("FDC_API_KEY")
+        or "DEMO_KEY"
+    )
+
+
+def _usda_category(raw: str) -> str:
+    text = (raw or "").lower()
+    mapping = (
+        (("beef", "pork", "lamb", "veal", "poultry", "chicken", "turkey", "fish",
+          "seafood", "sausage", "finfish", "shellfish", "cured meat", "frankfurter",
+          "meat"), "Meat & fish"),
+        (("dairy", "cheese", "milk", "yogurt", "egg"), "Dairy & eggs"),
+        (("vegetable", "potato", "tomato", "lettuce", "cabbage"), "Vegetables"),
+        (("fruit", "berry", "melon"), "Fruit"),
+        (("nut", "seed"), "Nuts & seeds"),
+        (("legume", "bean", "pea", "soy", "tofu"), "Legumes"),
+        (("grain", "bread", "cereal", "pasta", "rice", "baked product"), "Grains"),
+        (("beverage", "alcohol", "drink", "juice"), "Drinks"),
+    )
+    for needles, label in mapping:
+        if any(n in text for n in needles):
+            return label
+    return "Extras"
+
+
+def _usda_default_grams(food: dict[str, Any]) -> int:
+    measures = food.get("foodMeasures") or []
+    for item in measures:
+        if (item.get("disseminationText") or "").lower() == "quantity not specified":
+            weight = item.get("gramWeight")
+            if weight:
+                return max(1, int(round(float(weight))))
+    for item in sorted(measures, key=lambda row: row.get("rank") or 99):
+        weight = float(item.get("gramWeight") or 0)
+        if 15 <= weight <= 250:
+            return int(round(weight))
+    return 100
+
+
+def _usda_nutrients(food: dict[str, Any]) -> tuple[dict[str, float], list[str]]:
+    values = {key: 0.0 for key in MULTIPLIERS}
+    found: set[str] = set()
+    for nutrient in food.get("foodNutrients") or []:
+        nid = nutrient.get("nutrientId")
+        key = FDC_NUTRIENT_IDS.get(nid)
+        if not key:
+            continue
+        amount = nutrient.get("value")
+        if amount is None:
+            continue
+        values[key] = float(amount)
+        found.add(key)
+    missing = [key for key in MULTIPLIERS if key not in found]
+    return values, missing
+
+
+def search_usda(query: str, limit: int = 15) -> dict[str, Any]:
+    """Search USDA FoodData Central and compute PRAL from the five nutrients."""
+    q = (query or "").strip()
+    if len(q) < 2:
+        return {"ok": False, "error": "Type at least 2 characters to search USDA.", "foods": []}
+    payload = {
+        "query": q,
+        "dataType": ["Foundation", "SR Legacy", "Survey (FNDDS)"],
+        "pageSize": max(1, min(int(limit), 25)),
+    }
+    body = json.dumps(payload).encode("utf-8")
+    url = f"{FDC_SEARCH_URL}?api_key={_usda_api_key()}"
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:200]
+        if exc.code == 429:
+            return {
+                "ok": False,
+                "error": "USDA rate limit hit. Wait a minute and try again, or get a free key at fdc.nal.usda.gov.",
+                "foods": [],
+            }
+        return {"ok": False, "error": f"USDA search failed ({exc.code}). {detail}", "foods": []}
+    except urllib.error.URLError:
+        return {"ok": False, "error": "Could not reach USDA FoodData Central. Check the network.", "foods": []}
+
+    foods_out = []
+    for raw in data.get("foods") or []:
+        nutrients, missing = _usda_nutrients(raw)
+        if len(missing) == 5:
+            continue
+        name = (raw.get("description") or "USDA food").strip()
+        rec = {
+            "id": f"fdc:{raw.get('fdcId')}",
+            "name": name[:80],
+            "category": _usda_category(str(raw.get("foodCategory") or "")),
+            "default_grams": _usda_default_grams(raw),
+            "source": "usda",
+            "incomplete": bool(missing),
+            "detail": raw.get("dataType") or "",
+            **nutrients,
+        }
+        item = _food_from_record(rec)
+        foods_out.append(item)
+    return {
+        "ok": True,
+        "query": q,
+        "total": data.get("totalHits"),
+        "foods": foods_out,
+        "source": "USDA FoodData Central",
+    }
+
+
+def catalog_payload() -> dict[str, Any]:
+    catalog = list(foods())
+    return {
+        "formula": formula_text(),
+        "multipliers": dict(MULTIPLIERS),
+        "units": dict(NUTRIENT_UNITS),
+        "labels": dict(NUTRIENT_LABELS),
+        "categories": categories(),
+        "foods": catalog,
+        "food_count": len(catalog),
+        "online_search": True,
+        "note": (
+            "Positive PRAL is acid-forming; negative is alkaline-forming. "
+            "Taste (lemon) is not the same as renal acid load. Estimate only."
+        ),
+    }
 
 
 def food_pral(food: dict[str, Any], grams: float | None = None) -> dict[str, Any]:
@@ -258,22 +353,6 @@ def formula_text() -> str:
     )
 
 
-def catalog_payload() -> dict[str, Any]:
-    catalog = foods()
-    return {
-        "formula": formula_text(),
-        "multipliers": dict(MULTIPLIERS),
-        "units": dict(NUTRIENT_UNITS),
-        "labels": dict(NUTRIENT_LABELS),
-        "categories": categories(),
-        "foods": catalog,
-        "note": (
-            "Positive PRAL is acid-forming; negative is alkaline-forming. "
-            "Taste (lemon) is not the same as renal acid load. Estimate only."
-        ),
-    }
-
-
 def _print_result(result: dict[str, Any], title: str | None = None) -> None:
     if title:
         print(title)
@@ -308,6 +387,7 @@ def cli(argv: list[str] | None = None) -> int:
             "  python3 pral.py food banana\n"
             "  python3 pral.py food cheddar --grams 30\n"
             "  python3 pral.py search cheese\n"
+            "  python3 pral.py search kimchi --online\n"
             "  python3 pral.py meal banana:118 cheddar:30 potato:170\n"
             "  python3 pral.py --list-foods\n"
         ),
@@ -331,6 +411,7 @@ def cli(argv: list[str] | None = None) -> int:
     search_cmd = sub.add_parser("search", help="Search built-in foods")
     search_cmd.add_argument("query")
     search_cmd.add_argument("--json", action="store_true")
+    search_cmd.add_argument("--online", action="store_true", help="Also search USDA FoodData Central")
 
     list_cmd = sub.add_parser("list", help="List built-in foods")
     list_cmd.add_argument("--category", default="")
@@ -355,10 +436,10 @@ def cli(argv: list[str] | None = None) -> int:
         if getattr(args, "json", False):
             print(json.dumps(rows, indent=2))
             return 0
-        print(f"{'Food':<28} {'Category':<14} {'PRAL/100g':>10}  Usual serving")
+        print(f"{'Food':<36} {'Category':<14} {'PRAL/100g':>10}  Usual serving")
         for item in rows:
             print(
-                f"{item['name']:<28} {item['category']:<14} "
+                f"{item['name']:<36} {item['category']:<14} "
                 f"{item['pral_per_100']:>+10.1f}  {item['default_grams']} g"
             )
         return 0
@@ -396,14 +477,26 @@ def cli(argv: list[str] | None = None) -> int:
 
     if args.cmd == "search":
         rows = search_foods(args.query)
+        if args.online:
+            remote = search_usda(args.query)
+            if not remote.get("ok"):
+                print(remote.get("error") or "USDA search failed.")
+                if not rows:
+                    return 1
+            else:
+                seen = {item["id"] for item in rows}
+                for item in remote["foods"]:
+                    if item["id"] not in seen:
+                        rows.append(item)
         if args.json:
             print(json.dumps(rows, indent=2))
             return 0
         if not rows:
-            print("No matches.")
+            print("No matches. Try --online to search USDA FoodData Central.")
             return 1
         for item in rows:
-            print(f"{item['pral_per_100']:+6.1f}  {item['name']}  ({item['category']})")
+            tag = " USDA" if item.get("source") == "usda" else ""
+            print(f"{item['pral_per_100']:+6.1f}  {item['name']}  ({item['category']}){tag}")
         return 0
 
     if args.cmd == "meal":

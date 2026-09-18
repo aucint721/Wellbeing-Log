@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
 
 from flask import Flask, jsonify, render_template, request
 
-from pral import catalog_payload, calculate_pral, find_food, food_pral, meal_pral, search_foods
+from pral import catalog_payload, calculate_pral, find_food, food_pral, meal_pral, search_foods, search_usda
 
 app = Flask(__name__, template_folder=str(ROOT / "templates"))
 
@@ -38,6 +38,20 @@ def foods_api():
     query = request.args.get("q", "")
     category = request.args.get("category", "")
     return jsonify({"foods": search_foods(query, category)})
+
+
+@app.get("/api/search-online")
+def search_online_api():
+    query = request.args.get("q", "")
+    try:
+        limit = int(request.args.get("limit") or 15)
+    except ValueError:
+        limit = 15
+    result = search_usda(query, limit=limit)
+    status = 200 if result.get("ok") else 502
+    if not result.get("ok") and "characters" in (result.get("error") or ""):
+        status = 400
+    return jsonify(result), status
 
 
 @app.post("/api/calc")

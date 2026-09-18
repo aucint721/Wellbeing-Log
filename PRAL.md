@@ -24,7 +24,13 @@ PRAL (mEq) = 0.49 × protein (g)
 | Magnesium | −0.026 per mg | Alkaline |
 | Calcium | −0.013 per mg | Alkaline |
 
-Enter amounts **per 100 g**, then set the serving. The app scales the same way for built-in foods.
+Enter amounts **per 100 g**, then set the serving. The app scales the same way for built-in and USDA foods.
+
+The Common foods list includes **~240 everyday items**. Type to filter it. Press **Enter** or **Search USDA** to look up anything else in [USDA FoodData Central](https://fdc.nal.usda.gov/) (protein, phosphorus, potassium, magnesium, calcium → PRAL). Optional: set `USDA_FDC_API_KEY` for a higher rate limit; otherwise the public demo key is used.
+
+```zsh
+python3 pral.py search kimchi --online
+```
 
 ## Run it (Mac)
 

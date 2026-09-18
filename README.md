@@ -137,7 +137,8 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ├── file_triage_ui.py            # File Triage web UI (localhost:5051)
 ├── desktop_file_triage.py       # Native window for File Triage
 ├── FILE_TRIAGE.md               # Four-bucket sort policy
-├── pral.py                      # PRAL acid-load calculator + food catalog
+├── pral.py                      # PRAL acid-load calculator + USDA search
+├── pral_foods.json              # ~240 local foods (nutrients per 100 g)
 ├── pral                         # Mac launcher (python3; run from anywhere)
 ├── pral_ui.py                   # PRAL web UI (localhost:5052)
 ├── desktop_pral.py              # Native window for PRAL Checker
