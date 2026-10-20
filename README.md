@@ -211,6 +211,20 @@ python3 desktop_pral.py           # native window
 
 See `PRAL.md` for the formula, labels, and CLI examples.
 
+## 📚 Research Desk (M.Ed. open-access finder)
+
+For research-methods coursework (inclusion / special education; topic: Minecraft Education), use **Research Desk**: legal OA search (OpenAlex `is_oa:true`), curated ERIC/DOAJ/CORE portals, a local reading queue with Zotero export, and a uni library / ILL workflow. No paywall bypass.
+
+```zsh
+cd ~/Wellbeing-Log
+python3 research_desk_ui.py       # http://127.0.0.1:5053
+./research                        # same UI
+./research search "Minecraft Education special education"
+./research path                   # postgraduate study path
+```
+
+See `RESEARCH_DESK.md` for legal-access rules, CLI commands, and Zotero tips.
+
 ## 🎉 Get Started
 
 ```bash
