@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Desk — M.Ed. open-access finder</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='white' font-family='sans-serif'%3ER%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #334155 100%);
+            color: #0f172a;
+            min-height: 100vh;
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 20px; }
+        .header { color: #fff; text-align: center; margin-bottom: 18px; }
+        .header h1 { font-size: 2.1em; letter-spacing: -0.03em; }
+        .header p { opacity: 0.9; margin-top: 6px; max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.45; }
+        .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+        .pill {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 0.82em;
+        }
+        .tabs {
+            display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+            margin: 16px 0 18px;
+        }
+        .tab {
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(15,23,42,0.35);
+            color: #e2e8f0;
+            border-radius: 999px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .tab.active { background: #0f766e; border-color: #0f766e; color: #fff; font-weight: 700; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            margin-bottom: 16px;
+        }
+        h2 { font-size: 1.12em; margin-bottom: 6px; }
+        h3 { font-size: 1em; margin: 14px 0 6px; }
+        .muted { color: #64748b; font-size: 0.9em; line-height: 1.45; margin-bottom: 14px; }
+        label { display: block; font-weight: 600; margin: 0 0 6px; color: #1e293b; font-size: 0.88em; }
+        input[type="search"], input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+        textarea { min-height: 72px; resize: vertical; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #14b8a6; }
+        button, .chip {
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.92em;
+        }
+        button:hover, .chip:hover { border-color: #2dd4bf; }
+        .btn-primary {
+            background: #0f766e;
+            color: #fff;
+            border-color: #0f766e;
+            font-weight: 700;
+            padding: 12px 16px;
+        }
+        .btn-ghost { background: #f8fafc; }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+        .chip.active { background: #0f766e; color: #fff; border-color: #0f766e; }
+        .search-row { display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; align-items: end; }
+        .hit, .source, .curated, .step, .lane {
+            border-top: 1px solid #f1f5f9;
+            padding: 12px 4px;
+        }
+        .hit:first-child, .source:first-child, .curated:first-child { border-top: none; }
+        .name { font-weight: 600; line-height: 1.35; }
+        .meta { color: #64748b; font-size: 0.82em; margin-top: 4px; line-height: 1.4; }
+        .badge {
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #ccfbf1;
+            color: #115e59;
+            display: inline-block;
+        }
+        .badge.warn { background: #ffedd5; color: #9a3412; }
+        .hit-actions, .source-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        a.link {
+            color: #0f766e;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.88em;
+        }
+        a.link:hover { text-decoration: underline; }
+        .error { background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 10px; margin-top: 10px; }
+        .ok { background: #ecfdf5; color: #115e59; padding: 10px 12px; border-radius: 10px; margin-top: 10px; }
+        .note { font-size: 0.8em; color: #cbd5e1; margin-top: 8px; line-height: 1.4; text-align: center; }
+        .layout-2 { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 16px; }
+        .portal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .portal {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            background: #f8fafc;
+        }
+        .portal .name { font-size: 0.95em; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-grid .full { grid-column: 1 / -1; }
+        .abstract {
+            margin-top: 8px;
+            font-size: 0.86em;
+            color: #334155;
+            line-height: 1.45;
+            max-height: 4.2em;
+            overflow: hidden;
+        }
+        .abstract.open { max-height: none; }
+        pre.export {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.78em;
+            overflow: auto;
+            max-height: 280px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 900px) {
+            .layout-2, .search-row, .portal-grid, .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <h1>Research Desk</h1>
+        <p id="topic-line">Open-access finder, reading queue, and library workflow for M.Ed. research methods.</p>
+        <div class="pills">
+            <span class="pill">OpenAlex OA only</span>
+            <span class="pill">ERIC · DOAJ · CORE</span>
+            <span class="pill">Local notes → Zotero</span>
+            <span class="pill">No paywall bypass</span>
+        </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+        <button type="button" class="tab active" data-tab="find">Find OA</button>
+        <button type="button" class="tab" data-tab="curated">Curated</button>
+        <button type="button" class="tab" data-tab="sources">Sources</button>
+        <button type="button" class="tab" data-tab="path">Study path</button>
+        <button type="button" class="tab" data-tab="library">Library workflow</button>
+    </div>
+
+    <div class="panel active" id="panel-find">
+        <div class="layout-2">
+            <div class="card">
+                <h2>OpenAlex open-access search</h2>
+                <p class="muted">Live search with <code>open_access.is_oa:true</code> only. Save metadata for works you open legally.</p>
+                <div class="chips" id="presets"></div>
+                <div class="search-row">
+                    <div>
+                        <label for="query">Query</label>
+                        <input id="query" type="search" placeholder="Minecraft Education special education…">
+                    </div>
+                    <div>
+                        <label for="year-from">From year</label>
+                        <input id="year-from" type="number" min="1990" max="2030" placeholder="Any">
+                    </div>
+                    <button class="btn-primary" type="button" id="run-search">Search OA</button>
+                </div>
+                <div id="search-status"></div>
+                <div id="hits"></div>
+            </div>
+            <div class="card">
+                <h2>Portal deep-links</h2>
+                <p class="muted">Same query, opened in legal OA / discovery portals.</p>
+                <div class="portal-grid" id="portals"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel-curated">
+        <div class="card">
+            <h2>Curated starting points</h2>
+            <p class="muted">Research methods OERs, inclusion / special education, and Minecraft Education / GBL — deep links only, not scraped text.</p>
+            <input id="curated-q" type="search" placeholder="Filter curated list…">
+            <div id="curated-list"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel-sources">
+        <div class="layout-2">
+            <div class="card">
+                <h2>Reading queue</h2>
+                <p class="muted">Local staging notes for sources you legally access. Export RIS/BibTeX into Zotero for the real library.</p>
+                <div id="sources-list"></div>
+                <div class="btn-row">
+                    <button class="btn-primary" type="button" id="export-ris">Export RIS</button>
+                    <button class="btn-ghost" type="button" id="export-bib">Export BibTeX</button>
+                </div>
+                <pre class="export" id="export-box" hidden></pre>
+            </div>
+            <div class="card">
+                <h2>Add a source</h2>
+                <p class="muted">Manual entry when you already have a legal OA or library copy.</p>
+                <div class="form-grid">
+                    <div class="full">
+                        <label for="add-title">Title</label>
+                        <input id="add-title" type="text">
+                    </div>
+                    <div>
+                        <label for="add-authors">Authors (; separated)</label>
+                        <input id="add-authors" type="text">
+                    </div>
+                    <div>
+                        <label for="add-year">Year</label>
+                        <input id="add-year" type="number">
+                    </div>
+                    <div class="full">
+                        <label for="add-url">OA / landing URL</label>
+                        <input id="add-url" type="text" placeholder="https://…">
+                    </div>
+                    <div>
+                        <label for="add-doi">DOI</label>
+                        <input id="add-doi" type="text">
+                    </div>
+                    <div>
+                        <label for="add-tags">Tags (, separated)</label>
+                        <input id="add-tags" type="text" placeholder="minecraft, inclusion">
+                    </div>
+                    <div class="full">
+                        <label for="add-notes">Notes</label>
+                        <textarea id="add-notes" placeholder="Why it matters for your RQ…"></textarea>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-primary" type="button" id="add-source">Save to queue</button>
+                </div>
+                <div id="add-status"></div>
+                <h3>Zotero tips</h3>
+                <ul class="muted" id="zotero-tips" style="padding-left:18px"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel-path">
+        <div class="card">
+            <h2>Postgraduate research-methods study path</h2>
+            <p class="muted">Tailored to inclusion / special education and Minecraft Education as the intervention context.</p>
+            <div id="study-path"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel-library">
+        <div class="layout-2">
+            <div class="card">
+                <h2>University library · ILL · OA</h2>
+                <p class="muted">Legal access path when OpenAlex / ERIC is not enough.</p>
+                <div id="workflow"></div>
+            </div>
+            <div class="card">
+                <h2>Keep tools in their lanes</h2>
+                <div id="lanes"></div>
+            </div>
+        </div>
+    </div>
+
+    <p class="note" id="legal-note"></p>
+</div>
+<script>
+let boot = null;
+let activePreset = "topic_full";
+
+function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+}
+
+function showTab(id) {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === id));
+    document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + id));
+}
+
+document.getElementById("tabs").addEventListener("click", (e) => {
+    const tab = e.target.closest(".tab");
+    if (tab) showTab(tab.dataset.tab);
+});
+
+function renderPresets() {
+    const box = document.getElementById("presets");
+    box.innerHTML = (boot.presets || []).map((p) =>
+        `<button type="button" class="chip ${p.id === activePreset ? "active" : ""}" data-preset="${esc(p.id)}">${esc(p.label)}</button>`
+    ).join("");
+    box.querySelectorAll("[data-preset]").forEach((el) => {
+        el.addEventListener("click", () => {
+            activePreset = el.dataset.preset;
+            const preset = boot.presets.find((p) => p.id === activePreset);
+            if (preset) document.getElementById("query").value = preset.query;
+            renderPresets();
+            renderPortals(document.getElementById("query").value);
+        });
+    });
+}
+
+function renderPortals(query) {
+    const q = encodeURIComponent(query || boot.topic);
+    const box = document.getElementById("portals");
+    const portals = boot.portals || [];
+    box.innerHTML = portals.map((p) => {
+        let url = p.url;
+        if (query && query !== boot.topic) {
+            // refresh via API shape: use home search templates from bootstrap when possible
+            url = p.url;
+        }
+        return `<div class="portal">
+            <div class="name">${esc(p.name)}</div>
+            <div class="meta">${esc(p.blurb)}</div>
+            <div class="hit-actions"><a class="link" href="${esc(p.url)}" target="_blank" rel="noopener">Open portal</a></div>
+        </div>`;
+    }).join("");
+    if (query && query !== boot.topic) {
+        fetch("/api/portals?q=" + encodeURIComponent(query))
+            .then((r) => r.json())
+            .then((data) => {
+                box.innerHTML = (data.portals || []).map((p) => `<div class="portal">
+                    <div class="name">${esc(p.name)}</div>
+                    <div class="meta">${esc(p.blurb)}</div>
+                    <div class="hit-actions"><a class="link" href="${esc(p.url)}" target="_blank" rel="noopener">Open portal</a></div>
+                </div>`).join("");
+            });
+    }
+}
+
+async function runSearch() {
+    const q = document.getElementById("query").value.trim();
+    const year = document.getElementById("year-from").value.trim();
+    const status = document.getElementById("search-status");
+    const hits = document.getElementById("hits");
+    if (!q) {
+        status.innerHTML = `<div class="error">Enter a query.</div>`;
+        return;
+    }
+    status.innerHTML = `<div class="muted">Searching OpenAlex (OA only)…</div>`;
+    hits.innerHTML = "";
+    renderPortals(q);
+    let url = `/api/search?q=${encodeURIComponent(q)}&per_page=12`;
+    if (year) url += `&year_from=${encodeURIComponent(year)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) {
+        status.innerHTML = `<div class="error">${esc(data.error || "Search failed")}</div>`;
+        return;
+    }
+    status.innerHTML = `<div class="ok">${data.count} open-access hits · filter is_oa:true</div>`;
+    if (!data.results.length) {
+        hits.innerHTML = `<p class="muted">No OA hits. Try a broader preset or open ERIC/DOAJ portals.</p>`;
+        return;
+    }
+    hits.innerHTML = data.results.map((item, idx) => {
+        const authors = (item.authors || []).slice(0, 4).join(", ");
+        const oa = item.oa_url || item.landing_url || "";
+        const abs = item.abstract ? `<div class="abstract" data-abs>${esc(item.abstract)}</div>` : "";
+        return `<div class="hit" data-idx="${idx}">
+            <div class="name">${esc(item.title)}</div>
+            <div class="meta">${esc(authors)} (${esc(item.year || "n.d.")}) · cited ${esc(item.cited_by)} · <span class="badge">${esc(item.oa_status || "oa")}</span></div>
+            ${item.venue ? `<div class="meta">${esc(item.venue)}</div>` : ""}
+            ${abs}
+            <div class="hit-actions">
+                ${oa ? `<a class="link" href="${esc(oa)}" target="_blank" rel="noopener">Open OA</a>` : ""}
+                <button type="button" class="btn-ghost" data-save="${idx}">Save to queue</button>
+            </div>
+        </div>`;
+    }).join("");
+    hits._results = data.results;
+    hits.querySelectorAll("[data-save]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const item = hits._results[Number(btn.dataset.save)];
+            const payload = {
+                title: item.title,
+                authors: item.authors,
+                year: item.year,
+                doi: item.doi,
+                url: item.landing_url,
+                oa_url: item.oa_url || item.landing_url,
+                venue: item.venue,
+                tags: ["openalex", "oa"],
+                origin: "openalex",
+                notes: "",
+                status: "to-read",
+            };
+            const r = await fetch("/api/sources", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload),
+            });
+            const out = await r.json();
+            btn.textContent = out.duplicate ? "Already saved" : "Saved";
+            await refreshSources();
+        });
+    });
+    hits.querySelectorAll("[data-abs]").forEach((el) => {
+        el.addEventListener("click", () => el.classList.toggle("open"));
+    });
+}
+
+function renderCurated(filterQ) {
+    const needle = (filterQ || "").toLowerCase();
+    const items = (boot.curated || []).filter((c) => {
+        if (!needle) return true;
+        const blob = [c.title, c.blurb, c.why, ...(c.tags || [])].join(" ").toLowerCase();
+        return blob.includes(needle);
+    });
+    const box = document.getElementById("curated-list");
+    box.innerHTML = items.map((c) => `<div class="curated">
+        <div class="name">${esc(c.title)}</div>
+        <div class="meta">${esc(c.kind)} · ${(c.tags || []).map(esc).join(", ")}</div>
+        <div class="meta">${esc(c.blurb)}</div>
+        <div class="meta"><strong>Why:</strong> ${esc(c.why)}</div>
+        <div class="hit-actions">
+            <a class="link" href="${esc(c.oa_url || c.url)}" target="_blank" rel="noopener">Open</a>
+            <button type="button" class="btn-ghost" data-curated="${esc(c.id)}">Save to queue</button>
+        </div>
+    </div>`).join("") || `<p class="muted">No curated items match.</p>`;
+    box.querySelectorAll("[data-curated]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const c = boot.curated.find((x) => x.id === btn.dataset.curated);
+            await fetch("/api/sources", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    title: c.title,
+                    authors: c.authors,
+                    year: c.year,
+                    url: c.url,
+                    oa_url: c.oa_url,
+                    tags: c.tags,
+                    notes: c.why,
+                    origin: "curated",
+                }),
+            });
+            btn.textContent = "Saved";
+            await refreshSources();
+        });
+    });
+}
+
+async function refreshSources() {
+    const res = await fetch("/api/sources");
+    const data = await res.json();
+    boot.sources = data.sources || [];
+    const box = document.getElementById("sources-list");
+    if (!boot.sources.length) {
+        box.innerHTML = `<p class="muted">Queue is empty. Save OA hits or curated portals first.</p>`;
+        return;
+    }
+    box.innerHTML = boot.sources.map((s) => `<div class="source">
+        <div class="name">${esc(s.title)}</div>
+        <div class="meta">[${esc(s.status)}] ${(s.authors || []).slice(0,3).map(esc).join(", ")} (${esc(s.year || "n.d.")})</div>
+        ${s.notes ? `<div class="meta">${esc(s.notes)}</div>` : ""}
+        <div class="source-actions">
+            ${s.oa_url || s.url ? `<a class="link" href="${esc(s.oa_url || s.url)}" target="_blank" rel="noopener">Open</a>` : ""}
+            <button type="button" class="btn-ghost" data-del="${esc(s.id)}">Remove</button>
+        </div>
+    </div>`).join("");
+    box.querySelectorAll("[data-del]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            await fetch(`/api/sources/${encodeURIComponent(btn.dataset.del)}/delete`, { method: "POST" });
+            await refreshSources();
+        });
+    });
+}
+
+async function addManual() {
+    const status = document.getElementById("add-status");
+    const title = document.getElementById("add-title").value.trim();
+    if (!title) {
+        status.innerHTML = `<div class="error">Title is required.</div>`;
+        return;
+    }
+    const payload = {
+        title,
+        authors: document.getElementById("add-authors").value,
+        year: document.getElementById("add-year").value ? Number(document.getElementById("add-year").value) : null,
+        url: document.getElementById("add-url").value.trim(),
+        oa_url: document.getElementById("add-url").value.trim(),
+        doi: document.getElementById("add-doi").value.trim(),
+        notes: document.getElementById("add-notes").value.trim(),
+        tags: document.getElementById("add-tags").value.split(",").map((t) => t.trim()).filter(Boolean),
+        origin: "manual",
+    };
+    const res = await fetch("/api/sources", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+    });
+    const out = await res.json();
+    if (!out.ok) {
+        status.innerHTML = `<div class="error">${esc(out.error || "Could not save")}</div>`;
+        return;
+    }
+    status.innerHTML = `<div class="ok">${out.duplicate ? "Already in queue." : "Saved to queue."}</div>`;
+    document.getElementById("add-title").value = "";
+    document.getElementById("add-notes").value = "";
+    await refreshSources();
+}
+
+async function doExport(fmt) {
+    const res = await fetch("/api/export", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ format: fmt }),
+    });
+    const data = await res.json();
+    const box = document.getElementById("export-box");
+    if (!data.ok) {
+        box.hidden = false;
+        box.textContent = data.error || "Export failed";
+        return;
+    }
+    box.hidden = false;
+    box.textContent = data.text || `(empty — ${data.count} items)`;
+}
+
+function renderPath() {
+    const box = document.getElementById("study-path");
+    box.innerHTML = (boot.study_path || []).map((step) => `<div class="step">
+        <div class="name">Step ${esc(step.step)}: ${esc(step.title)}</div>
+        <div class="meta">${esc(step.focus)}</div>
+        <ul class="muted" style="padding-left:18px;margin-top:6px">
+            ${(step.do_next || []).map((d) => `<li>${esc(d)}</li>`).join("")}
+        </ul>
+        ${step.preset_id ? `<div class="hit-actions"><button type="button" class="btn-ghost" data-goto-preset="${esc(step.preset_id)}">Use related search preset</button></div>` : ""}
+    </div>`).join("");
+    box.querySelectorAll("[data-goto-preset]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            activePreset = btn.dataset.gotoPreset;
+            const preset = boot.presets.find((p) => p.id === activePreset);
+            if (preset) document.getElementById("query").value = preset.query;
+            renderPresets();
+            showTab("find");
+        });
+    });
+}
+
+function renderLibrary() {
+    document.getElementById("workflow").innerHTML = (boot.library_workflow || []).map((row) =>
+        `<div class="step"><div class="name">${esc(row.phase)}</div><div class="meta">${esc(row.detail)}</div></div>`
+    ).join("");
+    document.getElementById("lanes").innerHTML = (boot.tool_lanes || []).map((row) =>
+        `<div class="lane"><div class="name">${esc(row.tool)}</div><div class="meta"><strong>Use for:</strong> ${esc(row.use_for)}</div><div class="meta"><strong>Not for:</strong> ${esc(row.not_for)}</div></div>`
+    ).join("");
+}
+
+async function bootApp() {
+    const res = await fetch("/api/bootstrap");
+    boot = await res.json();
+    document.getElementById("topic-line").textContent = boot.topic;
+    document.getElementById("legal-note").textContent = boot.legal_note || "";
+    document.getElementById("query").value = boot.topic;
+    document.getElementById("zotero-tips").innerHTML = (boot.zotero_tips || []).map((t) => `<li>${esc(t)}</li>`).join("");
+    renderPresets();
+    renderPortals(boot.topic);
+    renderCurated("");
+    renderPath();
+    renderLibrary();
+    await refreshSources();
+}
+
+document.getElementById("run-search").addEventListener("click", runSearch);
+document.getElementById("query").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runSearch();
+});
+document.getElementById("curated-q").addEventListener("input", (e) => renderCurated(e.target.value));
+document.getElementById("add-source").addEventListener("click", addManual);
+document.getElementById("export-ris").addEventListener("click", () => doExport("ris"));
+document.getElementById("export-bib").addEventListener("click", () => doExport("bibtex"));
+bootApp();
+</script>
+</body>
+</html>

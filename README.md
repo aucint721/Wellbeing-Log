@@ -143,9 +143,16 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ├── desktop_pral.py              # Native window for PRAL Checker
 ├── Launch PRAL Checker.command  # Double-click on Mac
 ├── PRAL.md                      # Multipliers and how to read the score
+├── research_desk.py             # OA finder + reading queue + Zotero export
+├── research                     # Mac launcher for Research Desk
+├── research_desk_ui.py          # Research Desk web UI (localhost:5053)
+├── desktop_research_desk.py     # Native window for Research Desk
+├── Launch Research Desk.command # Double-click on Mac
+├── RESEARCH_DESK.md             # Zotero / Calibre / Hazel lanes + methods path
 ├── templates/index.html         # Presentation Web UI
 ├── templates/file_triage.html   # File Triage UI
 ├── templates/pral.html          # PRAL Checker UI
+├── templates/research_desk.html # Research Desk UI
 ├── theme_assets/                # Photo theme backgrounds (Unsplash)
 ├── scripts/fetch_theme_photos.py
 ├── scripts/make_triage_demo.py  # Sample messy folder for triage

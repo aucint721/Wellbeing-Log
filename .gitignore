@@ -31,6 +31,9 @@ instance/
 outputs/
 *.pptx
 
+# Research Desk local queue / Zotero exports
+research_data/
+
 # IDE
 .vscode/
 .idea/
