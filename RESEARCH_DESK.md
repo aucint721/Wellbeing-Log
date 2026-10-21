@@ -64,9 +64,29 @@ You already have the right stack. Research Desk does **not** replace them.
 
 Optional Hazel: watch `~/Downloads` for `.pdf`, move into a folder Zotero is set to check, or into `storage-inbox` you import in batches.
 
+## Find tab — set criteria before you search
+
+On **Find OA**, choose criteria first, then click **Search open access**. Presets only fill the query — they do **not** auto-run.
+
+| Field | Notes |
+|---|---|
+| **Query** | Required. Presets or free text. |
+| **Year from / Year to** | Optional inclusive range (`from_publication_date` / `to_publication_date`). |
+| **Results** | `per_page` (8–50). |
+| **Sort** | Relevance, most cited, newest, or oldest (OpenAlex sorts). |
+| **Work type** | Optional: article, review, book, book-chapter, dissertation. |
+
+An **About to search** summary shows the active criteria above the results. Last-used criteria are restored from `localStorage` when you return. OA-only (`open_access.is_oa:true`) is always on.
+
+CLI mirrors the same options:
+
+```zsh
+./research search "Minecraft Education" -n 20 --year-from 2018 --year-to 2025 --sort cited --type article
+```
+
 ## Suggested weekly flow
 
-1. Run a preset (Inclusion, GBL, or Minecraft Education) in **Find OA**.
+1. On **Find OA**, pick a preset (Inclusion, GBL, or Minecraft Education), adjust years/sort/count if needed, then Search.
 2. Open OA landing pages; save keepers to the **Sources** queue with a one-line note (or grab with the Zotero Connector).
 3. Follow the **Study path** steps (question → design → ethics → data → proposal).
 4. Export RIS → import into **Zotero** collections (Methods / Inclusion / GBL / Minecraft / Ethics).

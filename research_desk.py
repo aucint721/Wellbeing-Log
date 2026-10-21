@@ -488,18 +488,78 @@ def reconstruct_abstract(inverted: dict[str, list[int]] | None) -> str | None:
     return " ".join(positions[i] for i in sorted(positions))
 
 
-def search_openalex(query: str, *, per_page: int = 15, year_from: int | None = None) -> dict[str, Any]:
+# OpenAlex-supported sorts exposed to UI / CLI (value → API sort param).
+SORT_OPTIONS: dict[str, str] = {
+    "relevance": "relevance_score:desc",
+    "cited": "cited_by_count:desc",
+    "date_desc": "publication_date:desc",
+    "date_asc": "publication_date:asc",
+}
+
+# Common work types OpenAlex filters cleanly (optional).
+TYPE_OPTIONS: dict[str, str] = {
+    "": "Any type",
+    "article": "Article",
+    "review": "Review",
+    "book": "Book",
+    "book-chapter": "Book chapter",
+    "dissertation": "Dissertation",
+}
+
+
+def _parse_year(value: int | str | None) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        year = int(value)
+    except (TypeError, ValueError):
+        return None
+    if year < 1900 or year > 2100:
+        return None
+    return year
+
+
+def search_openalex(
+    query: str,
+    *,
+    per_page: int = 15,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    sort: str = "relevance",
+    work_type: str | None = None,
+) -> dict[str, Any]:
     q = (query or "").strip()
     if not q:
         return {"ok": False, "error": "Enter a search query.", "results": []}
+
+    year_from = _parse_year(year_from)
+    year_to = _parse_year(year_to)
+    if year_from and year_to and year_from > year_to:
+        return {
+            "ok": False,
+            "error": "Year from cannot be after year to.",
+            "results": [],
+        }
+
     filters = ["open_access.is_oa:true"]
     if year_from:
         filters.append(f"from_publication_date:{year_from}-01-01")
+    if year_to:
+        filters.append(f"to_publication_date:{year_to}-12-31")
+
+    type_key = (work_type or "").strip().lower()
+    if type_key and type_key in TYPE_OPTIONS and type_key != "":
+        filters.append(f"type:{type_key}")
+
+    sort_key = (sort or "relevance").strip().lower()
+    sort_param = SORT_OPTIONS.get(sort_key, SORT_OPTIONS["relevance"])
+    per_page_n = max(1, min(int(per_page or 15), 50))
+
     params = {
         "search": q,
         "filter": ",".join(filters),
-        "per_page": max(1, min(per_page, 50)),
-        "sort": "relevance_score:desc",
+        "per_page": per_page_n,
+        "sort": sort_param,
     }
     headers = {"User-Agent": USER_AGENT}
     try:
@@ -520,6 +580,15 @@ def search_openalex(query: str, *, per_page: int = 15, year_from: int | None = N
         "ok": True,
         "query": q,
         "count": len(results),
+        "criteria": {
+            "q": q,
+            "year_from": year_from,
+            "year_to": year_to,
+            "per_page": per_page_n,
+            "sort": sort_key if sort_key in SORT_OPTIONS else "relevance",
+            "work_type": type_key or None,
+            "oa_only": True,
+        },
         "meta": payload.get("meta") or {},
         "results": results,
     }
@@ -757,6 +826,18 @@ def bootstrap_payload() -> dict[str, Any]:
         "library_workflow": LIBRARY_WORKFLOW,
         "tool_lanes": TOOL_LANES,
         "sources": load_sources(),
+        "sort_options": [
+            {"id": key, "label": label}
+            for key, label in (
+                ("relevance", "Relevance"),
+                ("cited", "Most cited"),
+                ("date_desc", "Newest first"),
+                ("date_asc", "Oldest first"),
+            )
+        ],
+        "type_options": [
+            {"id": key, "label": label} for key, label in TYPE_OPTIONS.items()
+        ],
         "zotero_tips": [
             "Install the Zotero Connector for Safari/Chrome — one-click save from ERIC, DOAJ, publisher pages.",
             "Create collections: Methods, Inclusion, GBL, Minecraft, Ethics.",
@@ -791,6 +872,20 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("query", nargs="?", default=DEFAULT_TOPIC)
     sp.add_argument("-n", "--per-page", type=int, default=10)
     sp.add_argument("--year-from", type=int, default=None)
+    sp.add_argument("--year-to", type=int, default=None)
+    sp.add_argument(
+        "--sort",
+        choices=tuple(SORT_OPTIONS.keys()),
+        default="relevance",
+        help="relevance | cited | date_desc | date_asc",
+    )
+    sp.add_argument(
+        "--type",
+        dest="work_type",
+        choices=tuple(k for k in TYPE_OPTIONS if k),
+        default=None,
+        help="Optional OpenAlex work type (article, review, book, …)",
+    )
 
     sub.add_parser("presets", help="List search presets")
     sub.add_parser("curated", help="List curated OA starting points")
@@ -829,7 +924,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "search":
-        result = search_openalex(args.query, per_page=args.per_page, year_from=args.year_from)
+        result = search_openalex(
+            args.query,
+            per_page=args.per_page,
+            year_from=args.year_from,
+            year_to=args.year_to,
+            sort=args.sort,
+            work_type=args.work_type,
+        )
         if not result.get("ok"):
             print(result.get("error"), file=sys.stderr)
             return 1
@@ -839,7 +941,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"   {authors} ({item.get('year') or 'n.d.'}) · cited {item.get('cited_by')}")
             print(f"   OA: {item.get('oa_url') or item.get('landing_url')}")
             print()
-        print(f"{result['count']} open-access hits for: {result['query']}")
+        crit = result.get("criteria") or {}
+        bits = [f"sort={crit.get('sort', args.sort)}"]
+        if crit.get("year_from") or crit.get("year_to"):
+            bits.append(f"years={crit.get('year_from') or '…'}–{crit.get('year_to') or '…'}")
+        if crit.get("work_type"):
+            bits.append(f"type={crit['work_type']}")
+        print(f"{result['count']} open-access hits for: {result['query']} ({', '.join(bits)})")
         return 0
 
     if args.cmd == "presets":

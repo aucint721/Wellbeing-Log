@@ -84,13 +84,25 @@ def search_api():
     try:
         # UI uses per_page; CLI-style clients may send n=
         per_page = int(request.args.get("per_page") or request.args.get("n") or 12)
-        year_raw = request.args.get("year_from")
-        year_from = int(year_raw) if year_raw else None
-        payload = search_openalex(query, per_page=per_page, year_from=year_from)
+        year_from_raw = request.args.get("year_from") or ""
+        year_to_raw = request.args.get("year_to") or ""
+        year_from = int(year_from_raw) if year_from_raw.strip() else None
+        year_to = int(year_to_raw) if year_to_raw.strip() else None
+        sort = (request.args.get("sort") or "relevance").strip()
+        work_type = (request.args.get("type") or request.args.get("work_type") or "").strip() or None
+        payload = search_openalex(
+            query,
+            per_page=per_page,
+            year_from=year_from,
+            year_to=year_to,
+            sort=sort,
+            work_type=work_type,
+        )
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc), "results": []}), 502
     if not payload.get("ok"):
-        return jsonify(payload), 502
+        status = 400 if "Year from" in (payload.get("error") or "") else 502
+        return jsonify(payload), status
     payload["portals"] = portal_links(query)
     return jsonify(payload)
 
