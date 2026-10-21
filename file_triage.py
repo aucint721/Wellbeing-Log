@@ -99,6 +99,8 @@ TEXT_PREVIEW_EXTS = {
     ".rtf",
 }
 IMAGE_PREVIEW_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"}
+VIDEO_PREVIEW_EXTS = {".mov", ".mp4", ".m4v", ".webm"}
+AUDIO_PREVIEW_EXTS = {".mp3", ".m4a", ".wav", ".aac", ".ogg"}
 
 HASH_CHUNK = 1024 * 1024
 PREVIEW_CHARS = 4000
@@ -734,11 +736,19 @@ def preview_for(path: Path, ext: str) -> dict[str, Any]:
     if ext in IMAGE_PREVIEW_EXTS:
         preview["kind"] = "image"
         return preview
+    if ext in VIDEO_PREVIEW_EXTS:
+        preview["kind"] = "video"
+        preview["note"] = "Space for Quick Look."
+        return preview
+    if ext in AUDIO_PREVIEW_EXTS:
+        preview["kind"] = "audio"
+        preview["note"] = "Space for Quick Look."
+        return preview
     if ext == ".pdf":
         text, note = _pdf_preview(path)
-        preview["kind"] = "text" if text else "none"
+        preview["kind"] = "pdf"
         preview["text"] = text
-        preview["note"] = note
+        preview["note"] = note or "Space for Quick Look."
         return preview
     if ext in TEXT_PREVIEW_EXTS:
         try:
@@ -751,7 +761,7 @@ def preview_for(path: Path, ext: str) -> dict[str, Any]:
         if len(raw) > PREVIEW_CHARS:
             preview["note"] = f"Showing first {PREVIEW_CHARS:,} characters."
         return preview
-    preview["note"] = f"No text preview for {ext or 'this file type'}. Use the path to open it on your Mac."
+    preview["note"] = f"No in-app preview for {ext or 'this file type'}. Space still shows name and path. Open it on your Mac if you need the real file."
     return preview
 
 
