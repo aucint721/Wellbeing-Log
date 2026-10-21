@@ -46,14 +46,33 @@ cd ~/Wellbeing-Log
 
 Override host/port with `RESEARCH_HOST`, `RESEARCH_PORT`, or `PORT`. Default bind is **127.0.0.1:5053** (localhost only).
 
+## How this fits Zotero, Calibre, and Hazel
+
+You already have the right stack. Research Desk does **not** replace them.
+
+| Tool | Your job with it |
+|---|---|
+| **Zotero** | Source of truth for citations, PDFs you may keep, Word/Docs citing. Use the **Zotero Connector** on ERIC/DOAJ/publisher pages. Create collections: Methods / Inclusion / GBL / Minecraft / Ethics. |
+| **Research Desk** | Find legal OA hits fast, stage a short queue with study notes, **Export RIS or BibTeX** → Zotero File → Import. |
+| **Calibre** | Open textbooks and ebooks you own (`.epub` / `.mobi`). Not journal PDFs. |
+| **Hazel** | Ongoing automation only — e.g. browser downloads of research PDFs → `~/Zotero/storage-inbox`, rename `YYYY-Author-Title.pdf`. Do not auto-delete research PDFs. |
+
+### Zotero import (two paths)
+
+1. **From this desk:** Sources tab → Export RIS → Zotero **File → Import…**
+2. **From the browser:** Zotero Connector while reading ERIC / DOAJ / OA publisher pages (best for metadata quality).
+
+Optional Hazel: watch `~/Downloads` for `.pdf`, move into a folder Zotero is set to check, or into `storage-inbox` you import in batches.
+
 ## Suggested weekly flow
 
 1. Run a preset (Inclusion, GBL, or Minecraft Education) in **Find OA**.
-2. Open OA landing pages; save keepers to the **Sources** queue with a one-line note.
+2. Open OA landing pages; save keepers to the **Sources** queue with a one-line note (or grab with the Zotero Connector).
 3. Follow the **Study path** steps (question → design → ethics → data → proposal).
 4. Export RIS → import into **Zotero** collections (Methods / Inclusion / GBL / Minecraft / Ethics).
 5. For gaps, use **Library workflow**: uni discovery → ILL → Unpaywall — never unofficial PDF hosts.
+6. Put openly licensed / purchased education ebooks in **Calibre**; leave articles in Zotero.
 
 ## Data
 
-Local queue lives in `research_data/` (gitignored). Safe to delete if you want a clean slate; Zotero remains your long-term library.
+Local queue lives in `research_data/` (gitignored). Safe to delete if you want a clean slate; **Zotero remains your long-term library.**

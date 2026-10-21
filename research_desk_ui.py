@@ -82,7 +82,8 @@ def search_api():
     if not query:
         return jsonify({"ok": False, "error": "Query is required.", "results": []}), 400
     try:
-        per_page = int(request.args.get("per_page") or 12)
+        # UI uses per_page; CLI-style clients may send n=
+        per_page = int(request.args.get("per_page") or request.args.get("n") or 12)
         year_raw = request.args.get("year_from")
         year_from = int(year_raw) if year_raw else None
         payload = search_openalex(query, per_page=per_page, year_from=year_from)
