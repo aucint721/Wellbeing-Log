@@ -83,7 +83,36 @@
         .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
         .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
         .chip.active { background: #0f766e; color: #fff; border-color: #0f766e; }
-        .search-row { display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; align-items: end; }
+        .criteria-block {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .criteria-block h3 { margin: 0 0 4px; font-size: 0.95em; }
+        .criteria-help { color: #64748b; font-size: 0.82em; line-height: 1.4; margin-bottom: 12px; }
+        .criteria-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            align-items: end;
+        }
+        .criteria-grid .span-2 { grid-column: span 2; }
+        .criteria-grid .span-3 { grid-column: 1 / -1; }
+        .field-hint { display: block; color: #94a3b8; font-size: 0.75em; font-weight: 500; margin-top: 4px; }
+        .about-search {
+            background: #ecfdf5;
+            border: 1px solid #99f6e4;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin: 10px 0 4px;
+            font-size: 0.88em;
+            color: #115e59;
+            line-height: 1.45;
+        }
+        .about-search strong { font-weight: 700; }
+        .about-search .k { color: #0f766e; font-weight: 600; }
         .hit, .source, .curated, .step, .lane {
             border-top: 1px solid #f1f5f9;
             padding: 12px 4px;
@@ -144,7 +173,8 @@
             white-space: pre-wrap;
         }
         @media (max-width: 900px) {
-            .layout-2, .search-row, .portal-grid, .form-grid { grid-template-columns: 1fr; }
+            .layout-2, .portal-grid, .form-grid, .criteria-grid { grid-template-columns: 1fr; }
+            .criteria-grid .span-2, .criteria-grid .span-3 { grid-column: 1; }
         }
     </style>
 </head>
@@ -172,26 +202,77 @@
     <div class="panel active" id="panel-find">
         <div class="layout-2">
             <div class="card">
-                <h2>OpenAlex open-access search</h2>
-                <p class="muted">Live search with <code>open_access.is_oa:true</code> only. Save metadata for works you open legally.</p>
-                <div class="chips" id="presets"></div>
-                <div class="search-row">
-                    <div>
-                        <label for="query">Query</label>
-                        <input id="query" type="search" placeholder="Minecraft Education special education…">
+                <h2>Find open-access papers</h2>
+                <p class="muted">Set your criteria, review the summary, then search. Always filtered to OpenAlex <code>open_access.is_oa:true</code> — no paywall bypass.</p>
+
+                <div class="criteria-block">
+                    <h3>1. Start from a preset (optional)</h3>
+                    <p class="criteria-help">Presets only fill the query box — they do <strong>not</strong> run a search. Edit anything below, then click Search.</p>
+                    <div class="chips" id="presets"></div>
+
+                    <h3>2. Search criteria</h3>
+                    <p class="criteria-help">Change years, result count, or sort before you search. Last-used criteria are remembered on this browser.</p>
+                    <div class="criteria-grid">
+                        <div class="span-3">
+                            <label for="query">Query <span class="field-hint" style="display:inline;margin:0">(required)</span></label>
+                            <input id="query" type="search" placeholder="Minecraft Education special education…" autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="year-from">Year from</label>
+                            <input id="year-from" type="number" min="1900" max="2100" placeholder="Any" inputmode="numeric">
+                            <span class="field-hint">Inclusive start year</span>
+                        </div>
+                        <div>
+                            <label for="year-to">Year to</label>
+                            <input id="year-to" type="number" min="1900" max="2100" placeholder="Any" inputmode="numeric">
+                            <span class="field-hint">Inclusive end year</span>
+                        </div>
+                        <div>
+                            <label for="per-page">Results</label>
+                            <select id="per-page">
+                                <option value="8">8</option>
+                                <option value="12" selected>12</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <span class="field-hint">Max 50 per search</span>
+                        </div>
+                        <div class="span-2">
+                            <label for="sort">Sort by</label>
+                            <select id="sort">
+                                <option value="relevance" selected>Relevance</option>
+                                <option value="cited">Most cited</option>
+                                <option value="date_desc">Newest first</option>
+                                <option value="date_asc">Oldest first</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="work-type">Work type</label>
+                            <select id="work-type">
+                                <option value="" selected>Any type</option>
+                                <option value="article">Article</option>
+                                <option value="review">Review</option>
+                                <option value="book">Book</option>
+                                <option value="book-chapter">Book chapter</option>
+                                <option value="dissertation">Dissertation</option>
+                            </select>
+                            <span class="field-hint">Optional OpenAlex filter</span>
+                        </div>
                     </div>
-                    <div>
-                        <label for="year-from">From year</label>
-                        <input id="year-from" type="number" min="1990" max="2030" placeholder="Any">
+                    <div class="btn-row">
+                        <button class="btn-primary" type="button" id="run-search">Search open access</button>
+                        <button class="btn-ghost" type="button" id="reset-criteria">Reset criteria</button>
                     </div>
-                    <button class="btn-primary" type="button" id="run-search">Search OA</button>
                 </div>
+
+                <div id="about-search" class="about-search" hidden></div>
                 <div id="search-status"></div>
                 <div id="hits"></div>
             </div>
             <div class="card">
                 <h2>Portal deep-links</h2>
-                <p class="muted">Same query, opened in legal OA / discovery portals.</p>
+                <p class="muted">Same query, opened in legal OA / discovery portals. Updates when you search (or change the query and re-open portals after a run).</p>
                 <div class="portal-grid" id="portals"></div>
             </div>
         </div>
@@ -287,7 +368,22 @@
 </div>
 <script>
 let boot = null;
-let activePreset = "topic_full";
+let activePreset = null;
+const CRITERIA_KEY = "researchDesk.searchCriteria.v1";
+const SORT_LABELS = {
+    relevance: "Relevance",
+    cited: "Most cited",
+    date_desc: "Newest first",
+    date_asc: "Oldest first",
+};
+const TYPE_LABELS = {
+    "": "Any type",
+    article: "Article",
+    review: "Review",
+    book: "Book",
+    "book-chapter": "Book chapter",
+    dissertation: "Dissertation",
+};
 
 function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -305,6 +401,103 @@ document.getElementById("tabs").addEventListener("click", (e) => {
     if (tab) showTab(tab.dataset.tab);
 });
 
+function defaultCriteria() {
+    return {
+        q: (boot && boot.topic) || "",
+        year_from: "",
+        year_to: "",
+        per_page: "12",
+        sort: "relevance",
+        work_type: "",
+        preset_id: null,
+    };
+}
+
+function readCriteriaFromForm() {
+    return {
+        q: document.getElementById("query").value.trim(),
+        year_from: document.getElementById("year-from").value.trim(),
+        year_to: document.getElementById("year-to").value.trim(),
+        per_page: document.getElementById("per-page").value || "12",
+        sort: document.getElementById("sort").value || "relevance",
+        work_type: document.getElementById("work-type").value || "",
+        preset_id: activePreset,
+    };
+}
+
+function applyCriteriaToForm(c) {
+    const crit = Object.assign(defaultCriteria(), c || {});
+    document.getElementById("query").value = crit.q || "";
+    document.getElementById("year-from").value = crit.year_from || "";
+    document.getElementById("year-to").value = crit.year_to || "";
+    document.getElementById("per-page").value = String(crit.per_page || "12");
+    document.getElementById("sort").value = crit.sort || "relevance";
+    document.getElementById("work-type").value = crit.work_type || "";
+    activePreset = crit.preset_id || null;
+}
+
+function saveCriteria() {
+    try {
+        localStorage.setItem(CRITERIA_KEY, JSON.stringify(readCriteriaFromForm()));
+    } catch (_) { /* ignore quota / private mode */ }
+}
+
+function loadSavedCriteria() {
+    try {
+        const raw = localStorage.getItem(CRITERIA_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (_) {
+        return null;
+    }
+}
+
+function fillSortAndTypeOptions() {
+    const sortEl = document.getElementById("sort");
+    const typeEl = document.getElementById("work-type");
+    if (boot.sort_options && boot.sort_options.length) {
+        const current = sortEl.value;
+        sortEl.innerHTML = boot.sort_options.map((o) =>
+            `<option value="${esc(o.id)}">${esc(o.label)}</option>`
+        ).join("");
+        sortEl.value = current || "relevance";
+    }
+    if (boot.type_options && boot.type_options.length) {
+        const current = typeEl.value;
+        typeEl.innerHTML = boot.type_options.map((o) =>
+            `<option value="${esc(o.id)}">${esc(o.label)}</option>`
+        ).join("");
+        typeEl.value = current || "";
+    }
+}
+
+function criteriaSummaryHtml(c, { pending } = { pending: true }) {
+    const years = (c.year_from || c.year_to)
+        ? `${c.year_from || "…"}–${c.year_to || "…"}`
+        : "any year";
+    const typeLabel = TYPE_LABELS[c.work_type || ""] || c.work_type || "Any type";
+    const sortLabel = SORT_LABELS[c.sort] || c.sort || "Relevance";
+    const title = pending ? "About to search" : "Last search";
+    return `<strong>${title}</strong> · OA only ·
+        <span class="k">“${esc(c.q || "(empty)")}”</span> ·
+        years ${esc(years)} ·
+        ${esc(c.per_page || "12")} results ·
+        sort: ${esc(sortLabel)} ·
+        type: ${esc(typeLabel)}`;
+}
+
+function updateAboutSearch({ pending } = { pending: true }) {
+    const box = document.getElementById("about-search");
+    const c = readCriteriaFromForm();
+    if (!c.q && pending) {
+        box.hidden = true;
+        box.innerHTML = "";
+        return;
+    }
+    box.hidden = false;
+    box.innerHTML = criteriaSummaryHtml(c, { pending });
+}
+
 function renderPresets() {
     const box = document.getElementById("presets");
     box.innerHTML = (boot.presets || []).map((p) =>
@@ -312,25 +505,23 @@ function renderPresets() {
     ).join("");
     box.querySelectorAll("[data-preset]").forEach((el) => {
         el.addEventListener("click", () => {
+            // Fill query only — never auto-run search.
             activePreset = el.dataset.preset;
             const preset = boot.presets.find((p) => p.id === activePreset);
             if (preset) document.getElementById("query").value = preset.query;
             renderPresets();
-            renderPortals(document.getElementById("query").value);
+            saveCriteria();
+            updateAboutSearch({ pending: true });
+            const status = document.getElementById("search-status");
+            status.innerHTML = `<div class="muted">Preset loaded into the query. Review criteria, then click Search.</div>`;
         });
     });
 }
 
 function renderPortals(query) {
-    const q = encodeURIComponent(query || boot.topic);
     const box = document.getElementById("portals");
     const portals = boot.portals || [];
     box.innerHTML = portals.map((p) => {
-        let url = p.url;
-        if (query && query !== boot.topic) {
-            // refresh via API shape: use home search templates from bootstrap when possible
-            url = p.url;
-        }
         return `<div class="portal">
             <div class="name">${esc(p.name)}</div>
             <div class="meta">${esc(p.blurb)}</div>
@@ -351,37 +542,61 @@ function renderPortals(query) {
 }
 
 async function runSearch() {
-    const q = document.getElementById("query").value.trim();
-    const year = document.getElementById("year-from").value.trim();
+    const c = readCriteriaFromForm();
     const status = document.getElementById("search-status");
     const hits = document.getElementById("hits");
-    if (!q) {
-        status.innerHTML = `<div class="error">Enter a query.</div>`;
+    if (!c.q) {
+        status.innerHTML = `<div class="error">Enter a query before searching.</div>`;
+        updateAboutSearch({ pending: true });
         return;
     }
+    if (c.year_from && c.year_to && Number(c.year_from) > Number(c.year_to)) {
+        status.innerHTML = `<div class="error">Year from cannot be after year to.</div>`;
+        return;
+    }
+    saveCriteria();
+    updateAboutSearch({ pending: true });
     status.innerHTML = `<div class="muted">Searching OpenAlex (OA only)…</div>`;
     hits.innerHTML = "";
-    renderPortals(q);
-    let url = `/api/search?q=${encodeURIComponent(q)}&per_page=12`;
-    if (year) url += `&year_from=${encodeURIComponent(year)}`;
-    const res = await fetch(url);
+    renderPortals(c.q);
+
+    const params = new URLSearchParams();
+    params.set("q", c.q);
+    params.set("per_page", c.per_page || "12");
+    params.set("sort", c.sort || "relevance");
+    if (c.year_from) params.set("year_from", c.year_from);
+    if (c.year_to) params.set("year_to", c.year_to);
+    if (c.work_type) params.set("type", c.work_type);
+
+    const res = await fetch(`/api/search?${params.toString()}`);
     const data = await res.json();
     if (!data.ok) {
         status.innerHTML = `<div class="error">${esc(data.error || "Search failed")}</div>`;
         return;
     }
+    const used = data.criteria || c;
+    document.getElementById("about-search").hidden = false;
+    document.getElementById("about-search").innerHTML = criteriaSummaryHtml({
+        q: used.q || c.q,
+        year_from: used.year_from || "",
+        year_to: used.year_to || "",
+        per_page: String(used.per_page || c.per_page || "12"),
+        sort: used.sort || c.sort,
+        work_type: used.work_type || "",
+    }, { pending: false });
     status.innerHTML = `<div class="ok">${data.count} open-access hits · filter is_oa:true</div>`;
     if (!data.results.length) {
-        hits.innerHTML = `<p class="muted">No OA hits. Try a broader preset or open ERIC/DOAJ portals.</p>`;
+        hits.innerHTML = `<p class="muted">No OA hits. Broaden the query, clear year/type filters, or open ERIC/DOAJ portals.</p>`;
         return;
     }
     hits.innerHTML = data.results.map((item, idx) => {
         const authors = (item.authors || []).slice(0, 4).join(", ");
         const oa = item.oa_url || item.landing_url || "";
         const abs = item.abstract ? `<div class="abstract" data-abs>${esc(item.abstract)}</div>` : "";
+        const typeBit = item.type ? ` · ${esc(item.type)}` : "";
         return `<div class="hit" data-idx="${idx}">
             <div class="name">${esc(item.title)}</div>
-            <div class="meta">${esc(authors)} (${esc(item.year || "n.d.")}) · cited ${esc(item.cited_by)} · <span class="badge">${esc(item.oa_status || "oa")}</span></div>
+            <div class="meta">${esc(authors)} (${esc(item.year || "n.d.")}) · cited ${esc(item.cited_by)}${typeBit} · <span class="badge">${esc(item.oa_status || "oa")}</span></div>
             ${item.venue ? `<div class="meta">${esc(item.venue)}</div>` : ""}
             ${abs}
             <div class="hit-actions">
@@ -420,6 +635,16 @@ async function runSearch() {
     hits.querySelectorAll("[data-abs]").forEach((el) => {
         el.addEventListener("click", () => el.classList.toggle("open"));
     });
+}
+
+function resetCriteria() {
+    applyCriteriaToForm(defaultCriteria());
+    activePreset = null;
+    renderPresets();
+    saveCriteria();
+    updateAboutSearch({ pending: true });
+    document.getElementById("search-status").innerHTML = `<div class="muted">Criteria reset to topic defaults. Edit, then Search.</div>`;
+    document.getElementById("hits").innerHTML = "";
 }
 
 function renderCurated(filterQ) {
@@ -552,10 +777,15 @@ function renderPath() {
     </div>`).join("");
     box.querySelectorAll("[data-goto-preset]").forEach((btn) => {
         btn.addEventListener("click", () => {
+            // Fill criteria only — user reviews then clicks Search.
             activePreset = btn.dataset.gotoPreset;
             const preset = boot.presets.find((p) => p.id === activePreset);
             if (preset) document.getElementById("query").value = preset.query;
             renderPresets();
+            saveCriteria();
+            updateAboutSearch({ pending: true });
+            document.getElementById("search-status").innerHTML =
+                `<div class="muted">Preset loaded from study path. Review criteria, then click Search.</div>`;
             showTab("find");
         });
     });
@@ -575,10 +805,16 @@ async function bootApp() {
     boot = await res.json();
     document.getElementById("topic-line").textContent = boot.topic;
     document.getElementById("legal-note").textContent = boot.legal_note || "";
-    document.getElementById("query").value = boot.topic;
     document.getElementById("zotero-tips").innerHTML = (boot.zotero_tips || []).map((t) => `<li>${esc(t)}</li>`).join("");
+    fillSortAndTypeOptions();
+    const saved = loadSavedCriteria();
+    applyCriteriaToForm(saved || defaultCriteria());
+    if (!document.getElementById("query").value) {
+        document.getElementById("query").value = boot.topic;
+    }
     renderPresets();
-    renderPortals(boot.topic);
+    renderPortals(document.getElementById("query").value || boot.topic);
+    updateAboutSearch({ pending: true });
     renderCurated("");
     renderPath();
     renderLibrary();
@@ -586,8 +822,25 @@ async function bootApp() {
 }
 
 document.getElementById("run-search").addEventListener("click", runSearch);
+document.getElementById("reset-criteria").addEventListener("click", resetCriteria);
 document.getElementById("query").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runSearch();
+    if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch();
+    }
+});
+["query", "year-from", "year-to", "per-page", "sort", "work-type"].forEach((id) => {
+    const el = document.getElementById(id);
+    const sync = () => {
+        if (id === "query" && activePreset) {
+            activePreset = null;
+            renderPresets();
+        }
+        saveCriteria();
+        updateAboutSearch({ pending: true });
+    };
+    el.addEventListener("change", sync);
+    el.addEventListener("input", sync);
 });
 document.getElementById("curated-q").addEventListener("input", (e) => renderCurated(e.target.value));
 document.getElementById("add-source").addEventListener("click", addManual);
